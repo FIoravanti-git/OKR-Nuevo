@@ -1,13 +1,421 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
+// OKR multi-tenant — PostgreSQL; tablas en snake_case (@map).
+// company_id en filas de negocio para consultas por tenant, RLS futuro y sharding lógico.
 
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
   output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+// --- Enums ---
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN_EMPRESA
+  OPERADOR
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  EXPIRED
+}
+
+enum InstitutionalProjectStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum InstitutionalObjectiveStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum StrategicObjectiveStatus {
+  DRAFT
+  ACTIVE
+  AT_RISK
+  COMPLETED
+  CANCELLED
+}
+
+enum KeyResultStatus {
+  DRAFT
+  ON_TRACK
+  AT_RISK
+  COMPLETED
+  CANCELLED
+}
+
+/// Unidad / presentación de la métrica del resultado clave (UI y reporting).
+enum KeyResultMetricType {
+  NUMBER
+  PERCENT
+  CURRENCY
+  COUNT
+  CUSTOM
+}
+
+/// Origen del progreso del KR: manual, solo métricas, o combinación con actividades.
+enum KeyResultCalculationMode {
+  MANUAL
+  AUTOMATIC
+  HYBRID
+}
+
+/// Dirección de optimización de la meta del KR.
+/// ASCENDENTE: subir valor es mejor. DESCENDENTE: bajar valor es mejor.
+enum KeyResultTargetDirection {
+  ASCENDENTE
+  DESCENDENTE
+}
+
+enum ActivityStatus {
+  PLANNED
+  IN_PROGRESS
+  DONE
+  BLOCKED
+  CANCELLED
+}
+
+/// Cómo se agrega el avance desde hijos hacia el padre (aplicación + consistencia de datos).
+enum ProgressCalculationMode {
+  WEIGHTED_AVERAGE
+  SUM_NORMALIZED
+  MAX_OF_CHILDREN
+  MIN_OF_CHILDREN
+  MANUAL_OVERRIDE
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+  EXPORT
+  IMPERSONATE
+  OTHER
+}
+
+/// Origen del registro en el historial de avance del resultado clave.
+enum KeyResultProgressLogSource {
+  FORM_SAVE
+  STATUS_CHANGE
+  RECALCULATE
+}
+
+// --- Catálogo de planes (sin company_id) ---
+
+model Plan {
+  id          String   @id @default(cuid()) @map("id")
+  code        String?  @unique @map("code")
+  name        String   @map("name")
+  description String?  @map("description")
+  maxUsers    Int      @default(10) @map("max_users")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  subscriptions CompanySubscription[]
+
+  @@map("plans")
+}
+
+model Company {
+  id        String   @id @default(cuid()) @map("id")
+  name      String   @map("name")
+  slug      String   @unique @map("slug")
+  /// Identificador fiscal (RUC/NIT/etc.) según país; opcional.
+  ruc       String?  @map("ruc") @db.VarChar(32)
+  /// Correo de contacto comercial o administrativo de la organización.
+  email     String?  @map("email") @db.VarChar(255)
+  phone     String?  @map("phone") @db.VarChar(64)
+  isActive  Boolean  @default(true) @map("is_active")
+  /// Cupo efectivo de usuarios para la empresa (puede alinearse al plan o override comercial).
+  maxUsers  Int      @default(10) @map("max_users")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  users                   User[]
+  subscriptions          CompanySubscription[]
+  institutionalProjects  InstitutionalProject[]
+  institutionalObjectives InstitutionalObjective[]
+  strategicObjectives     StrategicObjective[]
+  keyResults              KeyResult[]
+  activities               Activity[]
+  activityProgressLogs     ActivityProgressLog[]
+  keyResultProgressLogs    KeyResultProgressLog[]
+  auditLogs                AuditLog[]
+
+  @@map("companies")
+}
+
+/// Historial y estado comercial: empresa ↔ plan (soporta renovaciones, cortes, trials).
+model CompanySubscription {
+  id                 String             @id @default(cuid()) @map("id")
+  companyId          String             @map("company_id")
+  company            Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  planId             String             @map("plan_id")
+  plan               Plan               @relation(fields: [planId], references: [id], onDelete: Restrict)
+  status             SubscriptionStatus @default(TRIALING) @map("status")
+  currentPeriodStart DateTime?          @map("current_period_start")
+  currentPeriodEnd   DateTime?          @map("current_period_end")
+  cancelAtPeriodEnd  Boolean            @default(false) @map("cancel_at_period_end")
+  externalRef        String?            @map("external_ref")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+
+  @@index([companyId, status])
+  @@index([planId])
+  @@map("company_subscriptions")
+}
+
+model User {
+  id             String    @id @default(cuid()) @map("id")
+  email          String    @unique @map("email")
+  passwordHash   String    @map("password_hash")
+  name           String    @map("name")
+  role           UserRole  @map("role")
+  companyId      String?   @map("company_id")
+  company        Company?  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  isActive       Boolean   @default(true) @map("is_active")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  activityProgressLogs     ActivityProgressLog[]
+  keyResultProgressLogs    KeyResultProgressLog[]
+  assignedActivities       Activity[]            @relation("ActivityAssignee")
+  auditLogsAsActor         AuditLog[]            @relation("AuditActor")
+
+  @@index([companyId])
+  @@index([email])
+  @@map("users")
+}
+
+/// Proyecto institucional: varios por empresa; objetivos institucionales cuelgan de cada uno.
+model InstitutionalProject {
+  id          String                      @id @default(cuid()) @map("id")
+  companyId   String                      @map("company_id")
+  company     Company                     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  title       String                      @map("title")
+  description String?                     @map("description")
+  mission     String?                     @map("mission")
+  vision      String?                     @map("vision")
+  year        Int?                        @map("year")
+  methodology String?                     @map("methodology") @db.VarChar(256)
+  status      InstitutionalProjectStatus  @default(DRAFT) @map("status")
+  /// Promedio ponderado de los `progress_cached` de los objetivos institucionales hijos (peso).
+  progressCached Decimal?                 @map("progress_cached") @db.Decimal(6, 2)
+  createdAt   DateTime                    @default(now()) @map("created_at")
+  updatedAt   DateTime                    @updatedAt @map("updated_at")
+
+  objectives InstitutionalObjective[]
+
+  @@index([companyId])
+  @@map("institutional_projects")
+}
+
+/// Objetivos alineados al plan institucional (nivel “macro”).
+model InstitutionalObjective {
+  id                     String                       @id @default(cuid()) @map("id")
+  companyId              String                       @map("company_id")
+  company                Company                      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  institutionalProjectId String                       @map("institutional_project_id")
+  institutionalProject   InstitutionalProject         @relation(fields: [institutionalProjectId], references: [id], onDelete: Cascade)
+  title                  String                       @map("title")
+  description            String?                      @map("description")
+  weight                 Decimal                      @default(1) @map("weight") @db.Decimal(12, 4)
+  sortOrder              Int                          @default(0) @map("sort_order")
+  status                 InstitutionalObjectiveStatus @default(DRAFT) @map("status")
+  progressCached         Decimal?                     @map("progress_cached") @db.Decimal(6, 2)
+  progressMode           ProgressCalculationMode      @default(WEIGHTED_AVERAGE) @map("progress_mode")
+  createdAt              DateTime                     @default(now()) @map("created_at")
+  updatedAt              DateTime                     @updatedAt @map("updated_at")
+
+  strategicObjectives StrategicObjective[]
+
+  @@index([companyId])
+  @@index([institutionalProjectId])
+  @@index([companyId, institutionalProjectId])
+  @@map("institutional_objectives")
+}
+
+/// Objetivos estratégicos / OKR “clave” bajo el objetivo institucional.
+model StrategicObjective {
+  id                         String                   @id @default(cuid()) @map("id")
+  companyId                  String                   @map("company_id")
+  company                    Company                  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  institutionalObjectiveId String                   @map("institutional_objective_id")
+  institutionalObjective     InstitutionalObjective   @relation(fields: [institutionalObjectiveId], references: [id], onDelete: Cascade)
+  title                      String                   @map("title")
+  description                String?                  @map("description")
+  weight                     Decimal                  @default(1) @map("weight") @db.Decimal(12, 4)
+  sortOrder                  Int                      @default(0) @map("sort_order")
+  status                     StrategicObjectiveStatus @default(DRAFT) @map("status")
+  progressCached             Decimal?                 @map("progress_cached") @db.Decimal(6, 2)
+  progressMode               ProgressCalculationMode  @default(WEIGHTED_AVERAGE) @map("progress_mode")
+  createdAt                  DateTime                 @default(now()) @map("created_at")
+  updatedAt                  DateTime                 @updatedAt @map("updated_at")
+
+  keyResults KeyResult[]
+
+  @@index([companyId])
+  @@index([institutionalObjectiveId])
+  @@index([companyId, institutionalObjectiveId])
+  @@map("strategic_objectives")
+}
+
+model KeyResult {
+  id                   String                   @id @default(cuid()) @map("id")
+  companyId            String                   @map("company_id")
+  company              Company                  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  strategicObjectiveId String                   @map("strategic_objective_id")
+  strategicObjective   StrategicObjective       @relation(fields: [strategicObjectiveId], references: [id], onDelete: Cascade)
+  title                String                   @map("title")
+  description          String?                  @map("description")
+  metricType           KeyResultMetricType      @default(NUMBER) @map("metric_type")
+  weight               Decimal                  @default(1) @map("weight") @db.Decimal(12, 4)
+  /// Línea base para el avance automático (trayectoria inicial → meta).
+  initialValue         Decimal?                 @map("initial_value") @db.Decimal(14, 4)
+  targetValue          Decimal?                 @map("target_value") @db.Decimal(14, 4)
+  currentValue         Decimal?                 @map("current_value") @db.Decimal(14, 4)
+  targetDirection      KeyResultTargetDirection @default(ASCENDENTE) @map("target_direction")
+  unit                 String?                  @map("unit")
+  progressCached       Decimal?                 @map("progress_cached") @db.Decimal(6, 2)
+  status               KeyResultStatus          @default(DRAFT) @map("status")
+  /// Cómo se calcula el progreso del propio KR (manual, métricas, híbrido con actividades).
+  calculationMode      KeyResultCalculationMode @default(AUTOMATIC) @map("calculation_mode")
+  /// Cómo se agregan las actividades que impactan este KR (`allow_activity_impact`).
+  progressMode         ProgressCalculationMode  @default(WEIGHTED_AVERAGE) @map("progress_mode")
+  /// Si es false, las actividades no entran en el cálculo híbrido ni automático desde hijos.
+  allowActivityImpact  Boolean                  @default(true) @map("allow_activity_impact")
+  sortOrder            Int                      @default(0) @map("sort_order")
+  createdAt            DateTime                 @default(now()) @map("created_at")
+  updatedAt            DateTime                 @updatedAt @map("updated_at")
+
+  activities   Activity[]
+  progressLogs KeyResultProgressLog[]
+
+  @@index([companyId])
+  @@index([strategicObjectiveId])
+  @@index([companyId, strategicObjectiveId])
+  @@map("key_results")
+}
+
+model Activity {
+  id                   String                  @id @default(cuid()) @map("id")
+  companyId            String                  @map("company_id")
+  company              Company                 @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  keyResultId          String                  @map("key_result_id")
+  keyResult            KeyResult               @relation(fields: [keyResultId], references: [id], onDelete: Cascade)
+  title                String                  @map("title")
+  description          String?                 @map("description")
+  assigneeUserId       String?                 @map("assignee_user_id")
+  assignee             User?                   @relation("ActivityAssignee", fields: [assigneeUserId], references: [id], onDelete: SetNull)
+  startDate            DateTime?               @map("start_date")
+  impactsProgress      Boolean                 @default(true) @map("impacts_progress")
+  contributionWeight   Decimal                 @default(1) @map("contribution_weight") @db.Decimal(12, 4)
+  /// Porcentaje de avance de la tarea; si impacta el KR, entra en el motor de agregación del resultado clave.
+  progressContribution Decimal?                @map("progress_contribution") @db.Decimal(6, 2)
+  status               ActivityStatus          @default(PLANNED) @map("status")
+  dueDate              DateTime?               @map("due_date")
+  createdAt            DateTime                @default(now()) @map("created_at")
+  updatedAt            DateTime                @updatedAt @map("updated_at")
+
+  progressLogs ActivityProgressLog[]
+
+  @@index([companyId])
+  @@index([keyResultId])
+  @@index([companyId, keyResultId])
+  @@index([assigneeUserId])
+  @@index([companyId, assigneeUserId])
+  @@map("activities")
+}
+
+/// Registro inmutable de cambios de avance (auditoría operativa y series temporales).
+model ActivityProgressLog {
+  id                String          @id @default(cuid()) @map("id")
+  companyId         String          @map("company_id")
+  company           Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  activityId        String          @map("activity_id")
+  activity          Activity        @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  previousProgress  Decimal?        @map("previous_progress") @db.Decimal(6, 2)
+  newProgress       Decimal?        @map("new_progress") @db.Decimal(6, 2)
+  previousStatus    ActivityStatus? @map("previous_status")
+  newStatus         ActivityStatus? @map("new_status")
+  note              String?         @map("note") @db.Text
+  changedByUserId   String?         @map("changed_by_user_id")
+  changedBy         User?           @relation(fields: [changedByUserId], references: [id], onDelete: SetNull)
+  createdAt         DateTime        @default(now()) @map("created_at")
+
+  @@index([companyId, activityId])
+  @@index([activityId, createdAt])
+  @@index([companyId, createdAt])
+  @@map("activity_progress_logs")
+}
+
+/// Historial de cambios de avance / métrica / estado del resultado clave (trazabilidad explícita).
+model KeyResultProgressLog {
+  id                   String                     @id @default(cuid()) @map("id")
+  companyId            String                     @map("company_id")
+  company              Company                    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  keyResultId          String                     @map("key_result_id")
+  keyResult            KeyResult                  @relation(fields: [keyResultId], references: [id], onDelete: Cascade)
+  source               KeyResultProgressLogSource @map("source")
+  previousProgress     Decimal?                   @map("previous_progress") @db.Decimal(6, 2)
+  newProgress          Decimal?                   @map("new_progress") @db.Decimal(6, 2)
+  previousCurrentValue Decimal?                   @map("previous_current_value") @db.Decimal(14, 4)
+  newCurrentValue      Decimal?                   @map("new_current_value") @db.Decimal(14, 4)
+  previousStatus       KeyResultStatus?           @map("previous_status")
+  newStatus            KeyResultStatus?           @map("new_status")
+  note                 String?                    @map("note") @db.Text
+  changedByUserId      String?                    @map("changed_by_user_id")
+  changedBy            User?                      @relation(fields: [changedByUserId], references: [id], onDelete: SetNull)
+  createdAt            DateTime                   @default(now()) @map("created_at")
+
+  @@index([companyId, keyResultId])
+  @@index([keyResultId, createdAt])
+  @@index([companyId, createdAt])
+  @@map("key_result_progress_logs")
+}
+
+/// Auditoría de dominio y seguridad; append-only (solo created_at).
+model AuditLog {
+  id           String       @id @default(cuid()) @map("id")
+  companyId    String?      @map("company_id")
+  company      Company?     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  actorUserId  String?      @map("actor_user_id")
+  actor        User?        @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  action       AuditAction  @map("action")
+  entityType   String       @map("entity_type")
+  entityId     String?      @map("entity_id")
+  metadata     Json?        @map("metadata")
+  ipAddress    String?      @map("ip_address") @db.VarChar(45)
+  userAgent    String?      @map("user_agent") @db.Text
+  createdAt    DateTime     @default(now()) @map("created_at")
+
+  @@index([companyId, createdAt])
+  @@index([actorUserId])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}
+
+/// Configuración global de la plataforma (fila única, `id` = `default`).
+model PlatformConfig {
+  id            String   @id @map("id") @db.VarChar(32)
+  displayName   String   @map("display_name") @db.VarChar(128)
+  supportEmail  String?  @map("support_email") @db.VarChar(255)
+  noticeBanner  String?  @map("notice_banner") @db.Text
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("platform_config")
 }

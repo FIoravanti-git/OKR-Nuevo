@@ -6,15 +6,9 @@ First, run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abrí **[http://localhost:3040](http://localhost:3040)** en el navegador. El proyecto usa el puerto **3040** de forma fija para no usar 3000, 3001, 3002, 5173, 5777, 8000 ni 8080. Si cambiás el puerto en los scripts, actualizá `NEXTAUTH_URL` en `.env`.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
