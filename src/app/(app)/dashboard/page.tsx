@@ -16,7 +16,7 @@ export default async function DashboardPage() {
 
   const subtitle =
     user.role === "SUPER_ADMIN"
-      ? "Visión ejecutiva de la plataforma multi-tenant"
+      ? "Visión ejecutiva de la plataforma multiempresa"
       : user.companyName
         ? user.companyName
         : "Tu espacio de trabajo";
@@ -34,7 +34,7 @@ export default async function DashboardPage() {
         <span className="text-pretty">
           {user.role === "SUPER_ADMIN"
             ? "Métricas globales sin filtro de empresa."
-            : "Todas las cifras están acotadas al tenant de tu organización."}
+            : "Todas las cifras están acotadas a tu organización."}
         </span>
       </div>
       <DashboardBody

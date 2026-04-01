@@ -107,7 +107,7 @@ export default async function ActividadesPage({ searchParams }: PageProps) {
       ) : null}
       <PageHeading
         title="Actividades"
-        description="Tareas bajo resultados clave: responsable, fechas, avance y opción de impactar el KR. Multiempresa por `company_id`."
+        description="Tareas bajo resultados clave: responsable, fechas, avance y opción de impactar el indicador."
       />
       {canMutate ? (
         <div className="mb-6 flex flex-wrap justify-end gap-2">

@@ -104,7 +104,7 @@ export function InstitutionalProjectForm({
         <Card className="border-border/80 shadow-sm">
           <CardHeader>
             <CardTitle className="text-base">Empresa</CardTitle>
-            <CardDescription>El proyecto queda vinculado al tenant seleccionado.</CardDescription>
+            <CardDescription>El proyecto queda vinculado a la empresa seleccionada.</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">

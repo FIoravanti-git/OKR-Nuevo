@@ -107,7 +107,7 @@ export default function LoginPage() {
               {
                 icon: Lock,
                 title: "Datos por organización",
-                desc: "Multi-tenant con aislamiento por empresa.",
+                desc: "Arquitectura multiempresa con aislamiento por organización.",
                 accent: "text-violet-300/90",
               },
               {
@@ -185,7 +185,7 @@ export default function LoginPage() {
         <p className="text-[0.75rem] text-zinc-500">
           <span className="font-medium text-zinc-400">OKR Stack</span>
           <span className="mx-2 text-zinc-700">·</span>
-          <span>Multi-tenant profesional</span>
+          <span>Multiempresa profesional</span>
           <span className="mx-2 text-zinc-700">·</span>
           <span className="text-zinc-600">© {new Date().getFullYear()}</span>
         </p>

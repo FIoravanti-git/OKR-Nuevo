@@ -43,7 +43,7 @@ export default async function NuevoObjetivoClavePage() {
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
       <PageHeading
         title="Nuevo objetivo clave"
-        description="Asociá el objetivo a un objetivo institucional; el `company_id` se toma del padre."
+        description="La empresa se asigna automáticamente según el objetivo institucional seleccionado."
       />
       {institutionalObjectives.length === 0 ? (
         <p className="rounded-lg border border-dashed border-border/80 bg-muted/30 px-4 py-8 text-center text-sm text-muted-foreground">

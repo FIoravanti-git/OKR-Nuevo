@@ -95,7 +95,7 @@ export function InstitutionalObjectiveForm({
         <Card className="border-border/80 shadow-sm">
           <CardHeader>
             <CardTitle className="text-base">Proyecto institucional</CardTitle>
-            <CardDescription>El objetivo queda ligado al proyecto y hereda el tenant (`company_id`).</CardDescription>
+            <CardDescription>El objetivo queda ligado al proyecto y a la empresa correspondiente.</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">

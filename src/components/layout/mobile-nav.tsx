@@ -81,7 +81,7 @@ export function MobileNav({ role }: MobileNavProps) {
             </nav>
           </ScrollArea>
           <Separator />
-          <p className="px-4 py-3 text-center text-[0.65rem] text-muted-foreground">Multi-tenant OKR</p>
+          <p className="px-4 py-3 text-center text-[0.65rem] text-muted-foreground">OKR multiempresa</p>
         </SheetContent>
       </Sheet>
     </>

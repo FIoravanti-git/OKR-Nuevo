@@ -69,7 +69,7 @@ export default async function ObjetivosInstitucionalesPage() {
       ) : null}
       <PageHeading
         title="Objetivos institucionales"
-        description="Macro-objetivos ligados a un proyecto institucional y al tenant (`company_id`). Los operadores tienen vista de lectura."
+        description="Macro-objetivos ligados a un proyecto institucional y su empresa. Los operadores tienen vista de lectura."
       />
       {canMutate ? (
         <div className="mb-6 flex flex-wrap justify-end gap-2">

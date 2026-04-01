@@ -111,7 +111,7 @@ export default async function ObjetivosClavePage({ searchParams }: PageProps) {
       ) : null}
       <PageHeading
         title="Objetivos clave"
-        description="OKR estratégicos bajo cada objetivo institucional. Filtros por proyecto y objetivo padre; multiempresa por `company_id`."
+        description="Objetivos clave bajo cada objetivo institucional. Filtros por proyecto y objetivo padre."
       />
       {canMutate ? (
         <div className="mb-6 flex flex-wrap justify-end gap-2">

@@ -16,6 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { DateInputDdMmYyyy } from "@/components/ui/date-input-ddmmyyyy";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { TypeaheadSelect } from "@/components/ui/typeahead-select";
 import { cn } from "@/lib/utils";
 
 export type ActivityFormFields = {
@@ -85,6 +86,16 @@ export function ActivityForm({
     return users.filter((u) => u.companyId === companyIdForAssignee);
   }, [users, companyIdForAssignee]);
 
+  const keyResultSelectOptions = useMemo(
+    () =>
+      keyResults.map((k) => ({
+        value: k.id,
+        label: `${k.projectTitle} › ${k.institutionalObjectiveTitle} › ${k.strategicObjectiveTitle} › ${k.title}`,
+        keywords: `${k.projectTitle} ${k.institutionalObjectiveTitle} ${k.strategicObjectiveTitle} ${k.title}`,
+      })),
+    [keyResults]
+  );
+
   async function onSubmit(values: ActivityFormFields) {
     const payload = {
       ...values,
@@ -118,25 +129,25 @@ export function ActivityForm({
           <CardHeader>
             <CardTitle className="text-base">Resultado clave</CardTitle>
             <CardDescription>
-              La actividad hereda empresa (`company_id`) del KR. Elegí primero el resultado para filtrar
-              responsables.
+              La empresa se asigna automáticamente según el resultado clave seleccionado. Elegí primero el
+              resultado para filtrar responsables.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
               <Label htmlFor="act-kr">Resultado clave</Label>
-              <select
+              <TypeaheadSelect
                 id="act-kr"
-                className="flex h-8 w-full max-w-2xl rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
-                {...register("keyResultId")}
-              >
-                <option value="">Seleccionar…</option>
-                {keyResults.map((k) => (
-                  <option key={k.id} value={k.id}>
-                    {k.projectTitle} › {k.institutionalObjectiveTitle} › {k.strategicObjectiveTitle} › {k.title}
-                  </option>
-                ))}
-              </select>
+                value={keyResultId ?? ""}
+                onValueChange={(value) =>
+                  setValue("keyResultId", value, { shouldDirty: true, shouldTouch: true, shouldValidate: true })
+                }
+                options={keyResultSelectOptions}
+                placeholder="Seleccionar…"
+                emptyText="Sin coincidencias"
+                ariaInvalid={!!errors.keyResultId}
+              />
+              <input type="hidden" {...register("keyResultId")} />
               {errors.keyResultId ? (
                 <p className="text-xs text-destructive">{errors.keyResultId.message}</p>
               ) : null}

@@ -99,7 +99,7 @@ export function StrategicObjectiveForm({
           <CardHeader>
             <CardTitle className="text-base">Jerarquía OKR</CardTitle>
             <CardDescription>
-              El objetivo clave queda bajo un objetivo institucional y hereda el tenant (`company_id`).
+              El objetivo clave queda bajo un objetivo institucional y la empresa se asigna automáticamente.
             </CardDescription>
           </CardHeader>
           <CardContent>

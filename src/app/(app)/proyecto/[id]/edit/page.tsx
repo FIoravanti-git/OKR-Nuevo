@@ -58,7 +58,7 @@ export default async function EditProyectoInstitucionalPage({ params }: PageProp
         </Button>
         <PageHeading
           title={`Editar · ${project.title}`}
-          description={`Organización: ${project.company.name}. El tenant no se puede cambiar.`}
+          description={`Organización: ${project.company.name}. La empresa no se puede cambiar.`}
         />
       </div>
       <InstitutionalProjectForm

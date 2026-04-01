@@ -162,7 +162,7 @@ export function UserForm({
       <Card className="border-border/80 shadow-sm">
         <CardHeader>
           <CardTitle className="text-base">Rol y organización</CardTitle>
-          <CardDescription>Permisos y tenant (empresa obligatoria salvo super administrador de plataforma).</CardDescription>
+          <CardDescription>Permisos y empresa (obligatoria salvo super administrador de plataforma).</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-6 sm:grid-cols-2">
           <div className="space-y-2">

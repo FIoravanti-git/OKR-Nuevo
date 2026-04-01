@@ -46,7 +46,7 @@ export default async function UsuariosPage() {
         description={
           sessionUser.role === "SUPER_ADMIN"
             ? "Gestión global: roles, empresas y estado de cuenta."
-            : "Usuarios de tu organización: roles y estado (sin acceso a otros tenants)."
+            : "Usuarios de tu organización: roles y estado (sin acceso a otras empresas)."
         }
       />
       <div className="mb-6 flex flex-wrap items-center justify-end gap-2">

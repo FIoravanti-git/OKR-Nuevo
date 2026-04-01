@@ -13,8 +13,7 @@ export function ModulePlaceholder({ title, description }: ModulePlaceholderProps
         <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent className="text-sm text-muted-foreground">
-        Próximo paso: conectar con Prisma, <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">company_id</code>{" "}
-        y permisos por rol en server actions.
+        Próximo paso: conectar datos reales y permisos por rol para completar este módulo.
       </CardContent>
     </Card>
   );

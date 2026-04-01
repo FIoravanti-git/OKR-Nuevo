@@ -42,7 +42,7 @@ export default async function CompaniesPage() {
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
       <PageHeading
         title="Empresas"
-        description="Administración multi-tenant: alta, planes activos, contacto y cupos por organización."
+        description="Administración multiempresa: alta, planes activos, contacto y cupos por organización."
       />
       <div className="mb-6 flex flex-wrap items-center justify-end gap-2">
         <Button render={<Link href="/companies/nueva" />} className="gap-1.5">

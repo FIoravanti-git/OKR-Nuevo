@@ -116,7 +116,7 @@ export function DashboardBody({
               <CardTitle className="text-base">Contexto</CardTitle>
               <CardDescription>
                 Rol actual: <span className="font-medium text-foreground">{roleLabel(role)}</span>. Los totales incluyen
-                todos los tenants; el aislamiento por empresa se aplica en módulos operativos.
+                todas las empresas; la separación por organización se aplica en módulos operativos.
               </CardDescription>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground">
@@ -142,8 +142,8 @@ export function DashboardBody({
             <CardHeader className="pb-2">
               <CardTitle className="text-base text-amber-950 dark:text-amber-100">Sin empresa asignada</CardTitle>
               <CardDescription className="text-amber-900/80 dark:text-amber-100/80">
-                Tu usuario no tiene <code className="rounded bg-background/50 px-1">company_id</code>. Contactá a un super
-                administrador para vincularte a una organización.
+                Tu usuario no tiene una empresa asignada. Contactá a un super administrador para vincularte a una
+                organización.
               </CardDescription>
             </CardHeader>
           </Card>
@@ -244,7 +244,7 @@ export function DashboardBody({
                 <Card className="border-border/80 bg-card/80 shadow-sm backdrop-blur-sm lg:col-span-1">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base">Accesos rápidos</CardTitle>
-                    <CardDescription className="text-xs">Ciclo OKR en tu tenant.</CardDescription>
+                    <CardDescription className="text-xs">Ciclo OKR en tu organización.</CardDescription>
                   </CardHeader>
                   <CardContent className="flex flex-wrap gap-2 text-sm">
                     <Link
@@ -356,7 +356,7 @@ export function DashboardBody({
             <CompanyDashboardCharts
               data={companyCharts}
               heading="Avance de la organización"
-              description="Los mismos indicadores de seguimiento que ve el administrador, para contexto compartido del tenant."
+              description="Los mismos indicadores de seguimiento que ve el administrador, para contexto compartido de la organización."
             />
           </section>
         </>

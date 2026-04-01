@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { TypeaheadSelect } from "@/components/ui/typeahead-select";
 import { cn } from "@/lib/utils";
 
 export type StrategicObjectiveOption = {
@@ -102,6 +103,7 @@ export function KeyResultForm({
   const {
     register,
     handleSubmit,
+    setValue,
     setError,
     control,
     formState: { errors, isSubmitting },
@@ -112,10 +114,23 @@ export function KeyResultForm({
   });
 
   const calculationMode = useWatch({ control, name: "calculationMode" });
+  const strategicObjectiveId = useWatch({ control, name: "strategicObjectiveId" });
   const initialV = useWatch({ control, name: "initialValue" });
   const currentV = useWatch({ control, name: "currentValue" });
   const targetV = useWatch({ control, name: "targetValue" });
   const targetDirection = useWatch({ control, name: "targetDirection" });
+  const strategicObjectiveOptions = useMemo(
+    () =>
+      strategicObjectives.map((s) => ({
+        value: s.id,
+        label:
+          viewerRole === "SUPER_ADMIN"
+            ? `${s.projectTitle} › ${s.institutionalObjectiveTitle} › ${s.title} · ${s.companyName}`
+            : `${s.projectTitle} › ${s.institutionalObjectiveTitle} › ${s.title}`,
+        keywords: `${s.projectTitle} ${s.institutionalObjectiveTitle} ${s.title} ${s.companyName}`,
+      })),
+    [strategicObjectives, viewerRole]
+  );
 
   const previewLinear =
     calculationMode !== "MANUAL"
@@ -160,26 +175,28 @@ export function KeyResultForm({
           <CardHeader>
             <CardTitle className="text-base">Jerarquía</CardTitle>
             <CardDescription>
-              El resultado clave cuelga de un objetivo clave; hereda empresa (`company_id`) y cadena de proyecto.
+              La empresa se asigna automáticamente según el objetivo clave seleccionado.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
               <Label htmlFor="kr-strategic">Objetivo clave</Label>
-              <select
+              <TypeaheadSelect
                 id="kr-strategic"
-                className="flex h-8 w-full max-w-2xl rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
-                {...register("strategicObjectiveId")}
-              >
-                <option value="">Seleccionar…</option>
-                {strategicObjectives.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {viewerRole === "SUPER_ADMIN"
-                      ? `${s.projectTitle} › ${s.institutionalObjectiveTitle} › ${s.title} · ${s.companyName}`
-                      : `${s.projectTitle} › ${s.institutionalObjectiveTitle} › ${s.title}`}
-                  </option>
-                ))}
-              </select>
+                value={strategicObjectiveId ?? ""}
+                onValueChange={(value) =>
+                  setValue("strategicObjectiveId", value, {
+                    shouldDirty: true,
+                    shouldTouch: true,
+                    shouldValidate: true,
+                  })
+                }
+                options={strategicObjectiveOptions}
+                placeholder="Seleccionar…"
+                emptyText="Sin coincidencias"
+                ariaInvalid={!!errors.strategicObjectiveId}
+              />
+              <input type="hidden" {...register("strategicObjectiveId")} />
               {errors.strategicObjectiveId ? (
                 <p className="text-xs text-destructive">{errors.strategicObjectiveId.message}</p>
               ) : null}

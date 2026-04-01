@@ -53,7 +53,6 @@ export function TypeaheadSelect({
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
   const [activeIndex, setActiveIndex] = React.useState(-1);
-  const timerRef = React.useRef<number | null>(null);
 
   const selected = React.useMemo(() => options.find((o) => o.value === value) ?? null, [options, value]);
 
@@ -65,13 +64,6 @@ export function TypeaheadSelect({
       return normalize(hay).includes(q);
     });
   }, [options, query]);
-
-  const resetQuerySoon = React.useCallback(() => {
-    if (timerRef.current) {
-      window.clearTimeout(timerRef.current);
-    }
-    timerRef.current = window.setTimeout(() => setQuery(""), 1200);
-  }, []);
 
   const selectByIndex = React.useCallback(
     (index: number) => {
@@ -87,6 +79,13 @@ export function TypeaheadSelect({
   const handleTypeahead = React.useCallback(
     (event: React.KeyboardEvent) => {
       if (!open) return;
+      const target = event.target as HTMLElement | null;
+      const isTypingField =
+        !!target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.getAttribute("contenteditable") === "true");
+
       if (event.key === "ArrowDown") {
         event.preventDefault();
         setActiveIndex((prev) => {
@@ -107,32 +106,15 @@ export function TypeaheadSelect({
         return;
       }
       if (event.key === "Escape") {
-        setQuery("");
+        if (!isTypingField) setQuery("");
         return;
       }
-      if (event.key === "Backspace") {
-        event.preventDefault();
-        setQuery((prev) => {
-          const next = prev.slice(0, -1);
-          return next;
-        });
-        resetQuerySoon();
+      if (isTypingField) {
         return;
-      }
-      if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
-        event.preventDefault();
-        setQuery((prev) => prev + event.key);
-        resetQuerySoon();
       }
     },
-    [activeIndex, filtered.length, open, resetQuerySoon, selectByIndex]
+    [activeIndex, filtered.length, open, selectByIndex]
   );
-
-  React.useEffect(() => {
-    return () => {
-      if (timerRef.current) window.clearTimeout(timerRef.current);
-    };
-  }, []);
 
   React.useEffect(() => {
     if (!open) {
@@ -187,7 +169,13 @@ export function TypeaheadSelect({
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={handleTypeahead}
+              onKeyDown={(event) => {
+                // Prevent DropdownMenu internal typeahead from hijacking text input.
+                event.stopPropagation();
+                if (event.key === "ArrowDown" || event.key === "ArrowUp" || event.key === "Enter") {
+                  handleTypeahead(event);
+                }
+              }}
               autoFocus
               placeholder="Buscar..."
               className="h-8 rounded-md pl-8 text-sm"

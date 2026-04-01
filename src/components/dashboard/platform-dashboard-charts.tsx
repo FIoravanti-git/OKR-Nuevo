@@ -59,7 +59,7 @@ export function PlatformDashboardCharts({ stats, charts }: Props) {
       <CardHeader className="pb-2">
         <CardTitle className="text-base">Panorama multi-empresa</CardTitle>
         <CardDescription>
-          Volúmenes globales de la plataforma y distribución de actividades por estado (todos los tenants).
+          Volúmenes globales de la plataforma y distribución de actividades por estado (todas las empresas).
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-8">
@@ -102,7 +102,7 @@ export function PlatformDashboardCharts({ stats, charts }: Props) {
           </h3>
           {activityPieData.length === 0 ? (
             <ChartEmpty title="Sin actividades">
-              No hay actividades en ningún tenant, o no hay datos para agrupar.
+              No hay actividades en ninguna empresa, o no hay datos para agrupar.
             </ChartEmpty>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 md:items-center">
