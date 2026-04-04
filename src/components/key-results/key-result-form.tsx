@@ -36,6 +36,11 @@ export type StrategicObjectiveOption = {
   projectTitle: string;
   institutionalObjectiveTitle: string;
   companyName: string;
+  companyId: string;
+  areaId: string | null;
+  areaName: string | null;
+  /** Texto ya formateado para mostrar responsables del área. */
+  areaResponsablesLabel: string;
 };
 
 export type KeyResultFormFields = {
@@ -132,6 +137,8 @@ export function KeyResultForm({
     [strategicObjectives, viewerRole]
   );
 
+  const selectedSo = strategicObjectives.find((s) => s.id === strategicObjectiveId);
+
   const previewLinear =
     calculationMode !== "MANUAL"
       ? linearMetricProgress(
@@ -175,10 +182,11 @@ export function KeyResultForm({
           <CardHeader>
             <CardTitle className="text-base">Jerarquía</CardTitle>
             <CardDescription>
-              La empresa se asigna automáticamente según el objetivo clave seleccionado.
+              La empresa y el área se toman del objetivo clave. Solo podés elegir objetivos que ya tengan área
+              asignada.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="kr-strategic">Objetivo clave</Label>
               <TypeaheadSelect
@@ -201,10 +209,57 @@ export function KeyResultForm({
                 <p className="text-xs text-destructive">{errors.strategicObjectiveId.message}</p>
               ) : null}
             </div>
+            {selectedSo?.areaId ? (
+              <div className="rounded-lg border border-border/70 bg-muted/15 px-4 py-3 text-sm">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Área</p>
+                <p className="mt-1 font-medium text-foreground">{selectedSo.areaName ?? "—"}</p>
+                <p className="mt-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Responsables</p>
+                <p className="mt-1 text-foreground">
+                  {selectedSo.areaResponsablesLabel.trim() ? selectedSo.areaResponsablesLabel : "Sin asignar"}
+                </p>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Se muestran automáticamente según el equipo del área. Para cambiarlos, editá el área en Organización.
+                </p>
+              </div>
+            ) : selectedSo ? (
+              <p className="rounded-lg border border-amber-500/25 bg-amber-500/5 px-3 py-2 text-sm text-amber-950 dark:text-amber-100">
+                Este objetivo clave no tiene área. Asignala en Objetivos clave antes de crear el resultado.
+              </p>
+            ) : null}
           </CardContent>
         </Card>
       ) : (
-        <input type="hidden" {...register("strategicObjectiveId")} />
+        <>
+          <input type="hidden" {...register("strategicObjectiveId")} />
+          <Card className="border-border/80 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-base">Jerarquía y área</CardTitle>
+              <CardDescription>
+                El área y los responsables coinciden con el objetivo clave padre (se actualizan al cambiar el área
+                allí).
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {strategicObjectives[0]?.areaId ? (
+                <div className="rounded-lg border border-border/70 bg-muted/15 px-4 py-3 text-sm">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Área</p>
+                  <p className="mt-1 font-medium text-foreground">{strategicObjectives[0]?.areaName ?? "—"}</p>
+                  <p className="mt-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Responsables</p>
+                  <p className="mt-1 text-foreground">
+                    {strategicObjectives[0]?.areaResponsablesLabel?.trim()
+                      ? strategicObjectives[0].areaResponsablesLabel
+                      : "Sin asignar"}
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm text-destructive">
+                  El objetivo clave padre no tiene área. Asignala en Objetivos clave para poder guardar cambios
+                  coherentes.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </>
       )}
 
       <Card className="border-border/80 shadow-sm">

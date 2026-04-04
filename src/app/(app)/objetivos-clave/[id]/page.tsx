@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { requireSessionUser } from "@/lib/auth/session-user";
-import { formatDate, keyResultStatusLabel, strategicObjectiveStatusLabel } from "@/lib/format";
+import { formatDate, formatResponsablesList, keyResultStatusLabel, strategicObjectiveStatusLabel } from "@/lib/format";
 import {
   canMutateStrategicObjective,
   canMutateStrategicObjectives,
@@ -33,6 +33,16 @@ export default async function ObjetivoClaveDetailPage({ params }: PageProps) {
     where: { id },
     include: {
       company: { select: { name: true } },
+      area: {
+        select: {
+          id: true,
+          name: true,
+          memberLinks: {
+            where: { esResponsable: true, user: { isActive: true } },
+            select: { user: { select: { name: true } } },
+          },
+        },
+      },
       institutionalObjective: {
         select: {
           id: true,
@@ -64,11 +74,15 @@ export default async function ObjetivoClaveDetailPage({ params }: PageProps) {
 
   const canEdit =
     canMutateStrategicObjectives(session) && canMutateStrategicObjective(session, row.companyId);
+  const canOpenAreaModule = session.role === "SUPER_ADMIN" || session.role === "ADMIN_EMPRESA";
 
   const progress = row.progressCached != null ? Number(row.progressCached) : null;
   const barPct = progress != null && !Number.isNaN(progress) ? Math.min(100, Math.max(0, progress)) : null;
   const io = row.institutionalObjective;
   const proj = io.institutionalProject;
+  const responsablesTxt = row.area
+    ? formatResponsablesList(row.area.memberLinks.map((m) => m.user.name))
+    : "";
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
@@ -174,6 +188,35 @@ export default async function ObjetivoClaveDetailPage({ params }: PageProps) {
               >
                 {io.title}
               </Button>
+            </div>
+            <Separator />
+            <div>
+              <p className="text-muted-foreground">Área</p>
+              {row.area ? (
+                canOpenAreaModule ? (
+                  <Button
+                    variant="link"
+                    className="h-auto p-0 text-base font-medium"
+                    render={<Link href={`/areas/${row.area.id}`} />}
+                  >
+                    {row.area.name}
+                  </Button>
+                ) : (
+                  <p className="font-medium">{row.area.name}</p>
+                )
+              ) : (
+                <p className="text-muted-foreground">Sin área asignada</p>
+              )}
+            </div>
+            <Separator />
+            <div>
+              <p className="text-muted-foreground">Responsables del área</p>
+              <p className="font-medium text-foreground">
+                {responsablesTxt.trim() ? responsablesTxt : "Sin asignar"}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Se actualizan desde el equipo del área en Organización.
+              </p>
             </div>
             <Separator />
             <div>

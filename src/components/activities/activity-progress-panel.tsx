@@ -29,6 +29,8 @@ type ActivityProgressPanelProps = {
   defaultStatus: ActivityStatus;
   defaultProgressInput: string;
   defaultObservation?: string;
+  /** Predecesora no hecha: no se puede pasar a en progreso / hecha ni cargar avance &gt; 0. */
+  blockedByDependency?: boolean;
 };
 
 export function ActivityProgressPanel({
@@ -36,6 +38,7 @@ export function ActivityProgressPanel({
   defaultStatus,
   defaultProgressInput,
   defaultObservation = "",
+  blockedByDependency = false,
 }: ActivityProgressPanelProps) {
   const router = useRouter();
   const resolver = useMemo(
@@ -95,6 +98,12 @@ export function ActivityProgressPanel({
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {blockedByDependency ? (
+          <p className="mb-4 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-950 dark:text-amber-100">
+            Esta tarea está bloqueada por una dependencia: la otra actividad tiene que estar hecha antes de poder
+            registrar avance o pasar a En progreso / Hecha.
+          </p>
+        ) : null}
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
           <div className="space-y-2">
@@ -105,7 +114,11 @@ export function ActivityProgressPanel({
               {...register("status")}
             >
               {STATUSES.map((s) => (
-                <option key={s} value={s}>
+                <option
+                  key={s}
+                  value={s}
+                  disabled={blockedByDependency && (s === "IN_PROGRESS" || s === "DONE")}
+                >
                   {activityStatusLabel(s)}
                 </option>
               ))}

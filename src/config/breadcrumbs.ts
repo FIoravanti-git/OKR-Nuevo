@@ -5,6 +5,8 @@ export const routePageLabels: Record<string, string> = {
   "/companies/nueva": "Nueva empresa",
   "/usuarios": "Usuarios",
   "/usuarios/nuevo": "Nuevo usuario",
+  "/areas": "Áreas",
+  "/areas/nuevo": "Nueva área",
   "/equipo": "Equipo",
   "/proyecto": "Proyecto institucional",
   "/proyecto/nuevo": "Nuevo proyecto",

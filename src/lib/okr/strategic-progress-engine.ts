@@ -27,7 +27,8 @@
  *
  * 6. **Proyecto institucional**  
  *    Se persiste en `institutional_projects.progress_cached` como promedio ponderado de los objetivos
- *    institucionales (`computeProjectProgressFromInstitutionalObjectives`); se actualiza al cambiar cualquier IO.
+ *    institucionales con `includedInGeneralProgress === true` (`computeProjectProgressFromInstitutionalObjectives`);
+ *    los demás mantienen su `progress_cached` interno pero no entran en ese consolidado.
  *
  * Los porcentajes se **acotan a [0, 100]**. Si no hay hijos con progreso válido, el resultado es `null` (sin dato consolidado).
  */

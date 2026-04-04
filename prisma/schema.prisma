@@ -106,6 +106,12 @@ enum AuditAction {
   OTHER
 }
 
+/// Área / departamento dentro de una empresa (organización de usuarios y OKR).
+enum AreaStatus {
+  ACTIVE
+  INACTIVE
+}
+
 /// Origen del registro en el historial de avance del resultado clave.
 enum KeyResultProgressLogSource {
   FORM_SAVE
@@ -154,6 +160,7 @@ model Company {
   activityProgressLogs     ActivityProgressLog[]
   keyResultProgressLogs    KeyResultProgressLog[]
   auditLogs                AuditLog[]
+  areas                    Area[]
 
   @@map("companies")
 }
@@ -178,6 +185,43 @@ model CompanySubscription {
   @@map("company_subscriptions")
 }
 
+/// Área o departamento de la empresa; agrupa usuarios y puede asociarse a objetivos y resultados clave.
+model Area {
+  id          String     @id @default(cuid()) @map("id")
+  companyId   String     @map("company_id")
+  company     Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name        String     @map("name")
+  description String?    @map("description") @db.Text
+  status      AreaStatus @default(ACTIVE) @map("status")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  memberLinks         AreaMember[]
+  strategicObjectives StrategicObjective[]
+  keyResults          KeyResult[]
+
+  @@unique([companyId, name])
+  @@index([companyId])
+  @@map("areas")
+}
+
+/// Pertenencia de usuario a área; `esResponsable` indica rol de responsable (puede haber varios por área).
+model AreaMember {
+  id             String   @id @default(cuid()) @map("id")
+  areaId         String   @map("area_id")
+  area           Area     @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  userId         String   @map("user_id")
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  esResponsable  Boolean  @default(false) @map("es_responsable")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@unique([areaId, userId])
+  @@index([areaId])
+  @@index([userId])
+  @@map("area_members")
+}
+
 model User {
   id             String    @id @default(cuid()) @map("id")
   email          String    @unique @map("email")
@@ -194,6 +238,7 @@ model User {
   keyResultProgressLogs    KeyResultProgressLog[]
   assignedActivities       Activity[]            @relation("ActivityAssignee")
   auditLogsAsActor         AuditLog[]            @relation("AuditActor")
+  areaMemberships          AreaMember[]
 
   @@index([companyId])
   @@index([email])
@@ -235,6 +280,8 @@ model InstitutionalObjective {
   weight                 Decimal                      @default(1) @map("weight") @db.Decimal(12, 4)
   sortOrder              Int                          @default(0) @map("sort_order")
   status                 InstitutionalObjectiveStatus @default(DRAFT) @map("status")
+  /// Si es false, el OI y toda su jerarquía siguen teniendo avance interno pero no entran en el consolidado del proyecto ni en promedios globales de reportes/dashboard.
+  includedInGeneralProgress Boolean                  @default(true) @map("incluido_en_progreso")
   progressCached         Decimal?                     @map("progress_cached") @db.Decimal(6, 2)
   progressMode           ProgressCalculationMode      @default(WEIGHTED_AVERAGE) @map("progress_mode")
   createdAt              DateTime                     @default(now()) @map("created_at")
@@ -262,6 +309,8 @@ model StrategicObjective {
   status                     StrategicObjectiveStatus @default(DRAFT) @map("status")
   progressCached             Decimal?                 @map("progress_cached") @db.Decimal(6, 2)
   progressMode               ProgressCalculationMode  @default(WEIGHTED_AVERAGE) @map("progress_mode")
+  areaId                     String?                  @map("area_id")
+  area                       Area?                    @relation(fields: [areaId], references: [id], onDelete: SetNull)
   createdAt                  DateTime                 @default(now()) @map("created_at")
   updatedAt                  DateTime                 @updatedAt @map("updated_at")
 
@@ -270,6 +319,7 @@ model StrategicObjective {
   @@index([companyId])
   @@index([institutionalObjectiveId])
   @@index([companyId, institutionalObjectiveId])
+  @@index([areaId])
   @@map("strategic_objectives")
 }
 
@@ -298,6 +348,8 @@ model KeyResult {
   /// Si es false, las actividades no entran en el cálculo híbrido ni automático desde hijos.
   allowActivityImpact  Boolean                  @default(true) @map("allow_activity_impact")
   sortOrder            Int                      @default(0) @map("sort_order")
+  areaId               String?                  @map("area_id")
+  area                 Area?                    @relation(fields: [areaId], references: [id], onDelete: SetNull)
   createdAt            DateTime                 @default(now()) @map("created_at")
   updatedAt            DateTime                 @updatedAt @map("updated_at")
 
@@ -307,6 +359,7 @@ model KeyResult {
   @@index([companyId])
   @@index([strategicObjectiveId])
   @@index([companyId, strategicObjectiveId])
+  @@index([areaId])
   @@map("key_results")
 }
 
@@ -321,7 +374,14 @@ model Activity {
   assigneeUserId       String?                 @map("assignee_user_id")
   assignee             User?                   @relation("ActivityAssignee", fields: [assigneeUserId], references: [id], onDelete: SetNull)
   startDate            DateTime?               @map("start_date")
+  /// Fin → inicio: esta actividad no puede iniciar ni avanzar hasta que la predecesora esté hecha.
+  dependsOnActivityId  String?                 @map("depends_on_activity_id")
+  dependsOnActivity    Activity?               @relation("ActivityDependency", fields: [dependsOnActivityId], references: [id], onDelete: SetNull)
+  dependentActivities  Activity[]              @relation("ActivityDependency")
+  /// Primer día (UTC) en que la tarea pudo ejecutarse de hecho (dependencia cumplida y trabajo iniciado).
+  actualStartDate      DateTime?               @map("actual_start_date")
   impactsProgress      Boolean                 @default(true) @map("impacts_progress")
+  /// Peso de impacto (peso_impacto) en la agregación ponderada hacia el KR; 0 si la tarea no impacta.
   contributionWeight   Decimal                 @default(1) @map("contribution_weight") @db.Decimal(12, 4)
   /// Porcentaje de avance de la tarea; si impacta el KR, entra en el motor de agregación del resultado clave.
   progressContribution Decimal?                @map("progress_contribution") @db.Decimal(6, 2)
@@ -337,6 +397,7 @@ model Activity {
   @@index([companyId, keyResultId])
   @@index([assigneeUserId])
   @@index([companyId, assigneeUserId])
+  @@index([dependsOnActivityId])
   @@map("activities")
 }
 

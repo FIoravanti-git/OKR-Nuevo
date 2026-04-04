@@ -30,6 +30,8 @@ export type IoProgressRow = {
   weight: string;
   projectTitle: string;
   companyName: string;
+  /** Si false, el OI no entra en el avance general del proyecto (sí mantiene avance interno). */
+  impactsGeneralProgress: boolean;
 };
 
 export type SoProgressRow = {
@@ -41,6 +43,7 @@ export type SoProgressRow = {
   ioTitle: string;
   projectTitle: string;
   companyName: string;
+  impactsGeneralProgress: boolean;
 };
 
 export type KrProgressRow = {
@@ -53,6 +56,7 @@ export type KrProgressRow = {
   ioTitle: string;
   projectTitle: string;
   companyName: string;
+  impactsGeneralProgress: boolean;
 };
 
 export type ActivityStatusCount = {

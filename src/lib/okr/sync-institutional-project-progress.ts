@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 
 /**
  * Actualiza `progress_cached` del proyecto institucional como **promedio ponderado** de los objetivos
- * institucionales hijos: Σ (progreso_IO × peso_IO) / Σ peso, solo entre IO con `progress_cached` definido.
+ * institucionales hijos con `includedInGeneralProgress`: Σ (progreso × peso) / Σ peso, solo entre IO con dato de avance.
  */
 export async function syncInstitutionalProjectProgressFromObjectives(
   institutionalProjectId: string
@@ -15,15 +15,17 @@ export async function syncInstitutionalProjectProgressFromObjectives(
     where: { id: institutionalProjectId },
     include: {
       objectives: {
-        select: { weight: true, progressCached: true },
+        select: { weight: true, progressCached: true, includedInGeneralProgress: true },
       },
     },
   });
 
   if (!row) return null;
 
+  const inScope = row.objectives.filter((o) => o.includedInGeneralProgress);
+
   const computed = computeProjectProgressFromInstitutionalObjectives(
-    row.objectives.map((o) => ({
+    inScope.map((o) => ({
       weight: Number(o.weight),
       progress: o.progressCached != null ? Number(o.progressCached) : null,
     }))

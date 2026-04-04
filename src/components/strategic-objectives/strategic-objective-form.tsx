@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo } from "react";
-import { useForm, type Resolver } from "react-hook-form";
+import { useForm, useWatch, type Resolver } from "react-hook-form";
 import { toast } from "sonner";
 import type { StrategicObjectiveStatus } from "@/generated/prisma";
 import { createStrategicObjective, updateStrategicObjective } from "@/lib/strategic-objectives/actions";
@@ -21,6 +21,13 @@ export type InstitutionalObjectiveOption = {
   title: string;
   projectTitle: string;
   companyName: string;
+  companyId: string;
+};
+
+export type AreaOption = {
+  id: string;
+  name: string;
+  companyId: string;
 };
 
 export type StrategicObjectiveFormFields = {
@@ -30,6 +37,7 @@ export type StrategicObjectiveFormFields = {
   sortOrder: string;
   institutionalObjectiveId: string;
   status: StrategicObjectiveStatus;
+  areaId: string;
 };
 
 type StrategicObjectiveFormProps = {
@@ -37,6 +45,7 @@ type StrategicObjectiveFormProps = {
   strategicId?: string;
   viewerRole: "SUPER_ADMIN" | "ADMIN_EMPRESA";
   institutionalObjectives: InstitutionalObjectiveOption[];
+  areaOptions: AreaOption[];
   defaultValues: StrategicObjectiveFormFields;
   cancelHref: string;
 };
@@ -48,6 +57,7 @@ export function StrategicObjectiveForm({
   strategicId,
   viewerRole,
   institutionalObjectives,
+  areaOptions,
   defaultValues,
   cancelHref,
 }: StrategicObjectiveFormProps) {
@@ -61,12 +71,22 @@ export function StrategicObjectiveForm({
     register,
     handleSubmit,
     setError,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<StrategicObjectiveFormFields>({
     resolver,
     defaultValues,
     mode: "onTouched",
   });
+
+  const institutionalObjectiveId = useWatch({ control, name: "institutionalObjectiveId" });
+  const selectedIo = institutionalObjectives.find((o) => o.id === institutionalObjectiveId);
+  const companyIdForArea =
+    mode === "edit" ? institutionalObjectives[0]?.companyId ?? null : selectedIo?.companyId ?? null;
+  const filteredAreas = useMemo(
+    () => (companyIdForArea ? areaOptions.filter((a) => a.companyId === companyIdForArea) : []),
+    [areaOptions, companyIdForArea]
+  );
 
   async function onSubmit(values: StrategicObjectiveFormFields) {
     const r =
@@ -186,6 +206,29 @@ export function StrategicObjectiveForm({
                 </option>
               ))}
             </select>
+          </div>
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="so-area">Área</Label>
+            <select
+              id="so-area"
+              disabled={!companyIdForArea}
+              className="flex h-8 w-full max-w-xl rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60 dark:bg-input/30"
+              {...register("areaId")}
+            >
+              <option value="">Seleccionar área…</option>
+              {filteredAreas.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
+            </select>
+            {mode === "create" && !companyIdForArea ? (
+              <p className="text-xs text-muted-foreground">Elegí primero el objetivo institucional para listar áreas.</p>
+            ) : null}
+            <p className="text-xs text-muted-foreground">
+              Los responsables del objetivo se toman del equipo del área (roles definidos en Organización).
+            </p>
+            {errors.areaId ? <p className="text-xs text-destructive">{errors.areaId.message}</p> : null}
           </div>
           <div className="space-y-2 sm:col-span-2">
             <Label htmlFor="so-desc">Descripción</Label>

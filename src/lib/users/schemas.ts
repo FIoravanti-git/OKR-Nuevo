@@ -14,6 +14,10 @@ export const userCreateFormSchema = z
     password: z.string().min(8, "Mínimo 8 caracteres").max(128, "Máximo 128 caracteres"),
     role: roleEnum,
     companyId: z.string().optional(),
+    areaId: z.preprocess(
+      (v) => (v === "" || v === null || v === undefined ? undefined : v),
+      z.string().min(1).optional()
+    ),
     isActive: z.coerce.boolean().default(true),
   })
   .superRefine((data, ctx) => {
@@ -42,6 +46,10 @@ export const userUpdateFormSchema = z
       }),
     role: roleEnum,
     companyId: z.string().optional(),
+    areaId: z.preprocess(
+      (v) => (v === "" || v === null || v === undefined ? undefined : v),
+      z.string().min(1).optional()
+    ),
     isActive: z.coerce.boolean().default(true),
   })
   .superRefine((data, ctx) => {

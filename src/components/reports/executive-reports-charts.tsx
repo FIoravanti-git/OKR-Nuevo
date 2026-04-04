@@ -81,7 +81,9 @@ export function ExecutiveReportsCharts({ data }: ExecutiveReportsChartsProps) {
   const { progressEvolution, progressEvolutionGranularity, progressEvolutionHint } = data;
 
   const ioBarData = data.ioProgress
-    .filter((r) => r.progress != null && Number.isFinite(r.progress))
+    .filter(
+      (r) => r.impactsGeneralProgress && r.progress != null && Number.isFinite(r.progress)
+    )
     .map((r) => ({
       name: r.title.length > 30 ? `${r.title.slice(0, 29)}…` : r.title,
       fullTitle: r.title,

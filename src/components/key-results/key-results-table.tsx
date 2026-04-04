@@ -108,6 +108,8 @@ const globalFilterFn: FilterFn<KeyResultAdminRow> = (row, _c, filterValue) => {
     r.institutionalObjectiveTitle,
     r.strategicObjectiveTitle,
     r.companyName,
+    r.areaName ?? "",
+    r.areaResponsablesLabel,
     keyResultStatusLabel(r.status),
     keyResultProgressHealthSearchText(r.progressCached),
     keyResultMetricTypeLabel(r.metricType),
@@ -286,6 +288,24 @@ export function KeyResultsTable({
               {calcModeBadge(row.original.calculationMode)}
             </div>
           </div>
+        ),
+      },
+      {
+        accessorKey: "areaName",
+        header: "Área",
+        cell: ({ row }) => (
+          <span className="max-w-[160px] truncate text-sm text-muted-foreground">
+            {row.original.areaName ?? "—"}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "areaResponsablesLabel",
+        header: "Responsables",
+        cell: ({ row }) => (
+          <span className="max-w-[200px] line-clamp-2 text-xs text-muted-foreground">
+            {row.original.areaResponsablesLabel.trim() ? row.original.areaResponsablesLabel : "—"}
+          </span>
         ),
       },
       ...(viewerRole === "SUPER_ADMIN"
@@ -512,7 +532,7 @@ export function KeyResultsTable({
       <DataTable
         columns={columns}
         data={filtered}
-        filterPlaceholder="Buscar por nombre, jerarquía, métrica o modo…"
+        filterPlaceholder="Buscar por nombre, jerarquía, área, métrica o modo…"
         globalFilterFn={globalFilterFn}
       />
     </div>

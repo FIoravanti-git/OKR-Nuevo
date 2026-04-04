@@ -57,6 +57,7 @@ export default async function NuevoObjetivoInstitucionalPage() {
             sortOrder: "0",
             institutionalProjectId: "",
             status: "DRAFT",
+            includedInGeneralProgress: true,
           }}
           cancelHref="/objetivos"
         />

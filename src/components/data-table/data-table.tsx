@@ -84,7 +84,7 @@ export function DataTable<TData, TValue>({
         </p>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-border/80 bg-card shadow-sm">
+      <div className="overflow-x-auto overscroll-x-contain rounded-xl border border-border/80 bg-card shadow-sm [touch-action:pan-x_pan-y]">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (

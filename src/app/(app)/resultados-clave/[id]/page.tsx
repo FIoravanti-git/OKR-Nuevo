@@ -14,6 +14,7 @@ import { requireSessionUser } from "@/lib/auth/session-user";
 import {
   activityStatusLabel,
   formatDate,
+  formatResponsablesList,
   formatAmount,
   keyResultCalculationModeLabel,
   keyResultMetricTypeLabel,
@@ -46,10 +47,31 @@ export default async function ResultadoClaveDetailPage({ params }: PageProps) {
     where: { id },
     include: {
       company: { select: { name: true } },
+      area: {
+        select: {
+          id: true,
+          name: true,
+          memberLinks: {
+            where: { esResponsable: true, user: { isActive: true } },
+            select: { user: { select: { name: true } } },
+          },
+        },
+      },
       strategicObjective: {
         select: {
           id: true,
           title: true,
+          areaId: true,
+          area: {
+            select: {
+              id: true,
+              name: true,
+              memberLinks: {
+                where: { esResponsable: true, user: { isActive: true } },
+                select: { user: { select: { name: true } } },
+              },
+            },
+          },
           institutionalObjectiveId: true,
           institutionalObjective: {
             select: {
@@ -83,11 +105,17 @@ export default async function ResultadoClaveDetailPage({ params }: PageProps) {
   }
 
   const canEdit = canMutateKeyResults(session) && canMutateKeyResult(session, row.companyId);
+  const canOpenAreaModule = session.role === "SUPER_ADMIN" || session.role === "ADMIN_EMPRESA";
 
   const progress = row.progressCached != null ? Number(row.progressCached) : null;
   const so = row.strategicObjective;
   const io = so.institutionalObjective;
   const proj = io.institutionalProject;
+  const effectiveArea = row.area ?? so.area;
+  const areaInherited = !row.area && Boolean(so.area);
+  const responsablesTxt = effectiveArea
+    ? formatResponsablesList(effectiveArea.memberLinks.map((m) => m.user.name))
+    : "";
 
   const linearPreview = linearMetricProgress(
     row.initialValue != null ? Number(row.initialValue) : null,
@@ -287,6 +315,38 @@ export default async function ResultadoClaveDetailPage({ params }: PageProps) {
               >
                 {so.title}
               </Button>
+            </div>
+            <Separator />
+            <div>
+              <p className="text-muted-foreground">Área</p>
+              {effectiveArea ? (
+                <>
+                  {canOpenAreaModule ? (
+                    <Button
+                      variant="link"
+                      className="h-auto p-0 font-medium"
+                      render={<Link href={`/areas/${effectiveArea.id}`} />}
+                    >
+                      {effectiveArea.name}
+                    </Button>
+                  ) : (
+                    <p className="font-medium">{effectiveArea.name}</p>
+                  )}
+                  {areaInherited ? (
+                    <p className="mt-1 text-xs text-muted-foreground">Misma área que el objetivo clave</p>
+                  ) : null}
+                </>
+              ) : (
+                <p className="text-muted-foreground">Sin área asignada</p>
+              )}
+            </div>
+            <Separator />
+            <div>
+              <p className="text-muted-foreground">Responsables del área</p>
+              <p className="font-medium">{responsablesTxt.trim() ? responsablesTxt : "Sin asignar"}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Coinciden con el equipo responsable del área en Organización.
+              </p>
             </div>
           </CardContent>
         </Card>

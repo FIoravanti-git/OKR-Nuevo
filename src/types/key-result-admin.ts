@@ -32,6 +32,9 @@ export type KeyResultAdminRow = {
   institutionalProjectId: string;
   projectTitle: string;
   activityCount: number;
+  areaId: string | null;
+  areaName: string | null;
+  areaResponsablesLabel: string;
   createdAt: string;
 };
 

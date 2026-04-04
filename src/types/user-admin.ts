@@ -7,6 +7,9 @@ export type UserAdminRow = {
   role: UserRole;
   companyId: string | null;
   companyName: string | null;
+  areaId: string | null;
+  areaName: string | null;
   isActive: boolean;
   createdAt: string;
+  canDelete: boolean;
 };

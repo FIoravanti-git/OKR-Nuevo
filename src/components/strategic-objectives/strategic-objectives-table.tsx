@@ -65,6 +65,8 @@ const globalFilterFn: FilterFn<StrategicObjectiveAdminRow> = (row, _c, filterVal
     r.projectTitle,
     r.institutionalObjectiveTitle,
     r.companyName,
+    r.areaName ?? "",
+    r.areaResponsablesLabel,
     strategicObjectiveStatusLabel(r.status),
   ]
     .join(" ")
@@ -171,6 +173,24 @@ export function StrategicObjectivesTable({
               <span>{row.original.institutionalObjectiveTitle}</span>
             </span>
           </div>
+        ),
+      },
+      {
+        accessorKey: "areaName",
+        header: "Área",
+        cell: ({ row }) => (
+          <span className="max-w-[160px] truncate text-sm text-muted-foreground">
+            {row.original.areaName ?? "—"}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "areaResponsablesLabel",
+        header: "Responsables",
+        cell: ({ row }) => (
+          <span className="max-w-[200px] line-clamp-2 text-xs text-muted-foreground">
+            {row.original.areaResponsablesLabel.trim() ? row.original.areaResponsablesLabel : "—"}
+          </span>
         ),
       },
       ...(viewerRole === "SUPER_ADMIN"
@@ -332,7 +352,7 @@ export function StrategicObjectivesTable({
       <DataTable
         columns={columns}
         data={filtered}
-        filterPlaceholder="Buscar por nombre, proyecto, objetivo institucional o estado…"
+        filterPlaceholder="Buscar por nombre, proyecto, área, objetivo institucional o estado…"
         globalFilterFn={globalFilterFn}
       />
     </div>

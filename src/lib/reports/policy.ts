@@ -185,6 +185,27 @@ export function keyResultReportWhere(
   return { AND: and };
 }
 
+/**
+ * Mismos KR que `keyResultReportWhere`, pero solo bajo objetivos institucionales que cuentan para el avance
+ * general del proyecto (métricas agregadas del reporte ejecutivo).
+ */
+export function keyResultReportWhereForGeneralProgress(
+  actor: SessionUser,
+  projectIds: string[],
+  filters: ReportFilters
+): Prisma.KeyResultWhereInput {
+  return {
+    AND: [
+      keyResultReportWhere(actor, projectIds, filters),
+      {
+        strategicObjective: {
+          institutionalObjective: { includedInGeneralProgress: true },
+        },
+      },
+    ],
+  };
+}
+
 /** Logs de avance de KR alineados al mismo alcance que el resto del reporte ejecutivo. */
 export function reportKeyResultProgressLogWhere(
   actor: SessionUser,
@@ -195,7 +216,7 @@ export function reportKeyResultProgressLogWhere(
     return { id: "__none__" };
   }
 
-  const krNested = keyResultReportWhere(actor, projectIds, filters);
+  const krNested = keyResultReportWhereForGeneralProgress(actor, projectIds, filters);
   const and: Prisma.KeyResultProgressLogWhereInput[] = [
     { keyResult: { is: krNested } },
     { newProgress: { not: null } },

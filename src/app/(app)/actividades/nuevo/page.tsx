@@ -2,9 +2,13 @@ import { redirect } from "next/navigation";
 import { ActivityForm } from "@/components/activities/activity-form";
 import { PageHeading } from "@/components/layout/page-heading";
 import { requireSessionUser } from "@/lib/auth/session-user";
-import { canMutateActivities, keyResultOptionsWhere } from "@/lib/activities/policy";
+import { activityListWhere, canMutateActivities, keyResultOptionsWhere } from "@/lib/activities/policy";
 import { prisma } from "@/lib/prisma";
-import type { AssignableUserOption, KeyResultOptionForActivity } from "@/types/activity-admin";
+import type {
+  ActivityDependencyOption,
+  AssignableUserOption,
+  KeyResultOptionForActivity,
+} from "@/types/activity-admin";
 import type { Prisma } from "@/generated/prisma";
 
 export default async function NuevaActividadPage() {
@@ -31,33 +35,55 @@ export default async function NuevaActividadPage() {
     usersWhere.id = "__none__";
   }
 
-  const [keyResultsRaw, usersRaw] = await Promise.all([
-    prisma.keyResult.findMany({
-      where: keyResultOptionsWhere(session),
-      select: {
-        id: true,
-        title: true,
-        companyId: true,
-        strategicObjective: {
-          select: {
-            title: true,
-            institutionalObjective: {
-              select: {
-                title: true,
-                institutionalProject: { select: { title: true } },
-              },
+  const keyResultsRaw = await prisma.keyResult.findMany({
+    where: keyResultOptionsWhere(session),
+    select: {
+      id: true,
+      title: true,
+      companyId: true,
+      areaId: true,
+      allowActivityImpact: true,
+      progressMode: true,
+      strategicObjective: {
+        select: {
+          title: true,
+          areaId: true,
+          institutionalObjective: {
+            select: {
+              title: true,
+              institutionalProject: { select: { title: true } },
             },
           },
         },
       },
-      orderBy: [{ sortOrder: "asc" }, { title: "asc" }],
-    }),
-    prisma.user.findMany({
-      where: usersWhere,
-      select: { id: true, name: true, email: true, companyId: true },
-      orderBy: { name: "asc" },
-    }),
-  ]);
+    },
+    orderBy: [{ sortOrder: "asc" }, { title: "asc" }],
+  });
+
+  const krIds = keyResultsRaw.map((k) => k.id);
+  const usersRaw = await prisma.user.findMany({
+    where: usersWhere,
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      companyId: true,
+      areaMemberships: { select: { areaId: true } },
+    },
+    orderBy: { name: "asc" },
+  });
+  const weightSums =
+    krIds.length === 0
+      ? []
+      : await prisma.activity.groupBy({
+          by: ["keyResultId"],
+          where: { keyResultId: { in: krIds }, impactsProgress: true },
+          _sum: { contributionWeight: true },
+        });
+
+  const sumByKrId = new Map(
+    weightSums.map((s) => [s.keyResultId, Number(s._sum.contributionWeight ?? 0)])
+  );
 
   const keyResults: KeyResultOptionForActivity[] = keyResultsRaw.map((k) => {
     const so = k.strategicObjective;
@@ -70,6 +96,11 @@ export default async function NuevaActividadPage() {
       projectTitle: p.title,
       institutionalObjectiveTitle: io.title,
       strategicObjectiveTitle: so.title,
+      keyResultAreaId: k.areaId,
+      strategicObjectiveAreaId: so.areaId,
+      allowActivityImpact: k.allowActivityImpact,
+      progressMode: k.progressMode,
+      otherImpactingWeightsSum: sumByKrId.get(k.id) ?? 0,
     };
   });
 
@@ -78,6 +109,25 @@ export default async function NuevaActividadPage() {
     name: u.name,
     email: u.email,
     companyId: u.companyId,
+    membershipAreaIds: u.areaMemberships.map((m) => m.areaId),
+  }));
+
+  const dependencyOptionsRaw = await prisma.activity.findMany({
+    where: activityListWhere(session),
+    select: {
+      id: true,
+      title: true,
+      status: true,
+      keyResult: { select: { title: true } },
+    },
+    orderBy: { title: "asc" },
+    take: 500,
+  });
+  const dependencyOptions: ActivityDependencyOption[] = dependencyOptionsRaw.map((a) => ({
+    id: a.id,
+    title: a.title,
+    status: a.status,
+    keyResultTitle: a.keyResult.title,
   }));
 
   return (
@@ -95,6 +145,7 @@ export default async function NuevaActividadPage() {
           mode="create"
           keyResults={keyResults}
           users={users}
+          dependencyOptions={dependencyOptions}
           defaultValues={{
             title: "",
             description: "",
@@ -106,6 +157,7 @@ export default async function NuevaActividadPage() {
             impactsProgress: true,
             contributionWeight: "1",
             progressContributionStr: "",
+            dependsOnActivityId: "",
             observation: "",
           }}
           cancelHref="/actividades"

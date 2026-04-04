@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { KeyResultForm } from "@/components/key-results/key-result-form";
 import { PageHeading } from "@/components/layout/page-heading";
 import { requireSessionUser } from "@/lib/auth/session-user";
+import { formatResponsablesFromAreaMemberLinks } from "@/lib/areas/responsables-display";
 import { canMutateKeyResults, strategicObjectiveOptionsWhere } from "@/lib/key-results/policy";
 import { prisma } from "@/lib/prisma";
 
@@ -21,10 +22,26 @@ export default async function NuevoResultadoClavePage() {
   }
 
   const strategicRaw = await prisma.strategicObjective.findMany({
-    where: strategicObjectiveOptionsWhere(session),
+    where: {
+      AND: [strategicObjectiveOptionsWhere(session), { areaId: { not: null } }],
+    },
     include: {
       institutionalObjective: {
-        select: { title: true, institutionalProject: { select: { title: true } }, company: { select: { name: true } } },
+        select: {
+          title: true,
+          institutionalProject: { select: { title: true } },
+          company: { select: { name: true } },
+        },
+      },
+      area: {
+        select: {
+          id: true,
+          name: true,
+          memberLinks: {
+            where: { esResponsable: true, user: { isActive: true } },
+            select: { user: { select: { name: true } } },
+          },
+        },
       },
     },
     orderBy: [
@@ -41,17 +58,22 @@ export default async function NuevoResultadoClavePage() {
     projectTitle: s.institutionalObjective.institutionalProject.title,
     institutionalObjectiveTitle: s.institutionalObjective.title,
     companyName: s.institutionalObjective.company.name,
+    companyId: s.companyId,
+    areaId: s.areaId,
+    areaName: s.area?.name ?? null,
+    areaResponsablesLabel: formatResponsablesFromAreaMemberLinks(s.area?.memberLinks),
   }));
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
       <PageHeading
         title="Nuevo resultado clave"
-        description="La empresa se asigna automáticamente según el objetivo clave seleccionado. Elegí cómo se calcula el avance."
+        description="El área y los responsables se heredan del objetivo clave. Elegí cómo se calcula el avance."
       />
       {strategicObjectives.length === 0 ? (
         <p className="rounded-lg border border-dashed border-border/80 bg-muted/30 px-4 py-8 text-center text-sm text-muted-foreground">
-          No hay objetivos clave en tu alcance. Creá uno en Objetivos clave primero.
+          No hay objetivos clave con área asignada. En Objetivos clave, editá un objetivo y elegí un área antes de
+          crear un resultado clave.
         </p>
       ) : (
         <KeyResultForm

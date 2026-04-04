@@ -34,6 +34,14 @@ function pct(n: number | null): string {
   return `${n.toFixed(1)}%`;
 }
 
+function OutOfGeneralScopeLabel() {
+  return (
+    <Badge variant="secondary" className="mt-1 max-w-full whitespace-normal font-normal text-[11px] leading-snug">
+      No impacta en el avance general
+    </Badge>
+  );
+}
+
 type ExecutiveReportsDashboardProps = {
   session: SessionUser;
   data: ExecutiveReportPayload;
@@ -264,7 +272,7 @@ export function ExecutiveReportsDashboard({ session, data }: ExecutiveReportsDas
 
       <ReportTableSection
         title="Avance por objetivo institucional"
-        description="Progreso consolidado almacenado en cada OI."
+        description="Progreso interno de cada objetivo. Los marcados como «No impacta en el avance general» no entran en el promedio del proyecto ni en indicadores consolidados."
         icon={Target}
       >
         <Table>
@@ -283,8 +291,11 @@ export function ExecutiveReportsDashboard({ session, data }: ExecutiveReportsDas
                 {session.role === "SUPER_ADMIN" ? (
                   <TableCell className="max-w-[120px] truncate text-muted-foreground">{row.companyName}</TableCell>
                 ) : null}
-                <TableCell className="max-w-[200px]">
-                  <ButtonLink href={`/objetivos/${row.id}`} label={row.title} />
+                <TableCell className="max-w-[220px]">
+                  <div className="flex flex-col items-start gap-0">
+                    <ButtonLink href={`/objetivos/${row.id}`} label={row.title} />
+                    {!row.impactsGeneralProgress ? <OutOfGeneralScopeLabel /> : null}
+                  </div>
                 </TableCell>
                 <TableCell className="max-w-[160px] truncate text-muted-foreground">{row.projectTitle}</TableCell>
                 <TableCell>
@@ -303,7 +314,7 @@ export function ExecutiveReportsDashboard({ session, data }: ExecutiveReportsDas
 
       <ReportTableSection
         title="Avance por objetivo clave"
-        description="Progreso consolidado de cada objetivo clave (OKR)."
+        description="Progreso consolidado de cada objetivo clave. Si el objetivo institucional padre es solo de seguimiento, verás la etiqueta correspondiente (no afecta promedios globales)."
         icon={Crosshair}
       >
         <Table>
@@ -325,9 +336,10 @@ export function ExecutiveReportsDashboard({ session, data }: ExecutiveReportsDas
                 <TableCell className="max-w-[200px]">
                   <ButtonLink href={`/objetivos-clave/${row.id}`} label={row.title} />
                 </TableCell>
-                <TableCell className="max-w-[200px]">
+                <TableCell className="max-w-[220px]">
                   <span className="line-clamp-2 text-muted-foreground text-xs">{row.ioTitle}</span>
                   <span className="block text-[0.7rem] text-muted-foreground/80">{row.projectTitle}</span>
+                  {!row.impactsGeneralProgress ? <OutOfGeneralScopeLabel /> : null}
                 </TableCell>
                 <TableCell>
                   <Badge variant="outline" className="font-normal">
@@ -345,7 +357,7 @@ export function ExecutiveReportsDashboard({ session, data }: ExecutiveReportsDas
 
       <ReportTableSection
         title="Avance por resultado clave"
-        description="Indicadores bajo objetivos clave; orden por última actualización. El semáforo coloreado refleja el % de avance (no sustituye el estado operativo del KR)."
+        description="Indicadores bajo objetivos clave; orden por última actualización. Los que cuelgan de un objetivo institucional solo de seguimiento muestran la etiqueta (no cuentan en promedios globales del reporte)."
         icon={Gauge}
       >
         {summary.keyResultsCount > data.keyResultsShown ? (
@@ -373,9 +385,10 @@ export function ExecutiveReportsDashboard({ session, data }: ExecutiveReportsDas
                 <TableCell className="max-w-[200px]">
                   <ButtonLink href={`/resultados-clave/${row.id}`} label={row.title} />
                 </TableCell>
-                <TableCell className="max-w-[220px] text-xs text-muted-foreground">
+                <TableCell className="max-w-[240px] text-xs text-muted-foreground">
                   <span className="line-clamp-2">{row.soTitle}</span>
                   <span className="block opacity-80">{row.projectTitle}</span>
+                  {!row.impactsGeneralProgress ? <OutOfGeneralScopeLabel /> : null}
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-col items-start gap-1.5">

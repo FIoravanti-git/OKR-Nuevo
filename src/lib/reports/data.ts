@@ -7,6 +7,7 @@ import { prismaActivityOverdueWhere } from "@/lib/activities/overdue";
 import {
   institutionalObjectiveReportWhere,
   keyResultReportWhere,
+  keyResultReportWhereForGeneralProgress,
   reportActivityWhere,
   reportKeyResultProgressLogWhere,
   reportProjectBaseWhere,
@@ -269,6 +270,7 @@ export async function getExecutiveReportData(
         status: true,
         progressCached: true,
         weight: true,
+        includedInGeneralProgress: true,
         institutionalProjectId: true,
         institutionalProject: { select: { title: true } },
         company: { select: { name: true } },
@@ -286,6 +288,7 @@ export async function getExecutiveReportData(
         institutionalObjective: {
           select: {
             title: true,
+            includedInGeneralProgress: true,
             institutionalProject: { select: { title: true } },
             company: { select: { name: true } },
           },
@@ -307,6 +310,7 @@ export async function getExecutiveReportData(
             institutionalObjective: {
               select: {
                 title: true,
+                includedInGeneralProgress: true,
                 institutionalProject: { select: { title: true } },
                 company: { select: { name: true } },
               },
@@ -333,12 +337,12 @@ export async function getExecutiveReportData(
     prisma.activity.count({ where: actWhereDone }),
     prisma.activity.count({ where: actWhereOverdue }),
     prisma.institutionalObjective.findMany({
-      where: ioWhere,
+      where: { AND: [ioWhere, { includedInGeneralProgress: true }] },
       select: { progressCached: true },
     }),
     prisma.keyResult.count({ where: krWhere }),
     prisma.keyResult.findMany({
-      where: krWhere,
+      where: keyResultReportWhereForGeneralProgress(actor, projectIds, filters),
       select: { progressCached: true },
     }),
     prisma.keyResultProgressLog.findMany({
@@ -358,13 +362,16 @@ export async function getExecutiveReportData(
 
   const projectProgress: ProjectProgressRow[] = projects.map((p) => {
     const list = iosByProject.get(p.id) ?? [];
+    const inGeneral = list.filter((x) => x.includedInGeneralProgress);
     return {
       id: p.id,
       title: p.title,
       status: p.status,
       year: p.year,
       companyName: p.company.name,
-      avgProgress: weightedAvgProgress(list.map((x) => ({ progressCached: x.progressCached, weight: x.weight }))),
+      avgProgress: weightedAvgProgress(
+        inGeneral.map((x) => ({ progressCached: x.progressCached, weight: x.weight }))
+      ),
       objectivesCount: list.length,
     };
   });
@@ -377,6 +384,7 @@ export async function getExecutiveReportData(
     weight: io.weight.toString(),
     projectTitle: io.institutionalProject.title,
     companyName: io.company.name,
+    impactsGeneralProgress: io.includedInGeneralProgress,
   }));
 
   const soProgress: SoProgressRow[] = sos.map((so) => ({
@@ -388,6 +396,7 @@ export async function getExecutiveReportData(
     ioTitle: so.institutionalObjective.title,
     projectTitle: so.institutionalObjective.institutionalProject.title,
     companyName: so.institutionalObjective.company.name,
+    impactsGeneralProgress: so.institutionalObjective.includedInGeneralProgress,
   }));
 
   const krProgress: KrProgressRow[] = krs.map((kr) => ({
@@ -400,6 +409,7 @@ export async function getExecutiveReportData(
     ioTitle: kr.strategicObjective.institutionalObjective.title,
     projectTitle: kr.strategicObjective.institutionalObjective.institutionalProject.title,
     companyName: kr.strategicObjective.institutionalObjective.company.name,
+    impactsGeneralProgress: kr.strategicObjective.institutionalObjective.includedInGeneralProgress,
   }));
 
   const statusMap = new Map(activitiesByStatusRaw.map((g) => [g.status, g._count]));

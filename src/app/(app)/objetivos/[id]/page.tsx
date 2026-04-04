@@ -93,6 +93,11 @@ export default async function ObjetivoInstitucionalDetailPage({ params }: PagePr
             <Badge variant="outline" className="font-normal tabular-nums">
               Progreso {formatProgress(progress)}
             </Badge>
+            {!objective.includedInGeneralProgress ? (
+              <Badge variant="secondary" className="max-w-full whitespace-normal text-center font-normal leading-snug">
+                No impacta en el avance general
+              </Badge>
+            ) : null}
           </div>
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">

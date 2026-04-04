@@ -12,6 +12,7 @@ import {
   strategicObjectiveOptionsWhere,
 } from "@/lib/key-results/policy";
 import { institutionalObjectiveOptionsWhere } from "@/lib/strategic-objectives/policy";
+import { formatResponsablesFromAreaMemberLinks } from "@/lib/areas/responsables-display";
 import { prisma } from "@/lib/prisma";
 import type {
   InstitutionalObjectiveFilterOption,
@@ -49,10 +50,31 @@ export default async function ResultadosClavePage({ searchParams }: PageProps) {
       where,
       include: {
         company: { select: { name: true } },
+        area: {
+          select: {
+            id: true,
+            name: true,
+            memberLinks: {
+              where: { esResponsable: true, user: { isActive: true } },
+              select: { user: { select: { name: true } } },
+            },
+          },
+        },
         strategicObjective: {
           select: {
             id: true,
             title: true,
+            areaId: true,
+            area: {
+              select: {
+                id: true,
+                name: true,
+                memberLinks: {
+                  where: { esResponsable: true, user: { isActive: true } },
+                  select: { user: { select: { name: true } } },
+                },
+              },
+            },
             institutionalObjectiveId: true,
             institutionalObjective: {
               select: {
@@ -112,6 +134,9 @@ export default async function ResultadosClavePage({ searchParams }: PageProps) {
     const s = k.strategicObjective;
     const io = s.institutionalObjective;
     const p = io.institutionalProject;
+    const effectiveArea = k.area ?? s.area;
+    const effectiveAreaId = k.areaId ?? s.areaId;
+    const effectiveAreaName = effectiveArea?.name ?? null;
     return {
       id: k.id,
       title: k.title,
@@ -138,6 +163,9 @@ export default async function ResultadosClavePage({ searchParams }: PageProps) {
       institutionalProjectId: io.institutionalProjectId,
       projectTitle: p.title,
       activityCount: k._count.activities,
+      areaId: effectiveAreaId,
+      areaName: effectiveAreaName,
+      areaResponsablesLabel: formatResponsablesFromAreaMemberLinks(effectiveArea?.memberLinks),
       createdAt: k.createdAt.toISOString(),
     };
   });

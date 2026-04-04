@@ -136,12 +136,12 @@ export async function getCompanyExecutiveDashboard(companyId: string) {
       select: {
         id: true,
         title: true,
-        objectives: { select: { weight: true, progressCached: true } },
+        objectives: { select: { weight: true, progressCached: true, includedInGeneralProgress: true } },
       },
       orderBy: [{ year: "desc" }, { title: "asc" }],
     }),
     prisma.institutionalObjective.findMany({
-      where: { companyId, progressCached: { not: null } },
+      where: { companyId, progressCached: { not: null }, includedInGeneralProgress: true },
       orderBy: { progressCached: "asc" },
       take: 6,
       select: {
@@ -152,7 +152,11 @@ export async function getCompanyExecutiveDashboard(companyId: string) {
       },
     }),
     prisma.keyResult.findMany({
-      where: { companyId, status: "AT_RISK" },
+      where: {
+        companyId,
+        status: "AT_RISK",
+        strategicObjective: { institutionalObjective: { includedInGeneralProgress: true } },
+      },
       orderBy: { updatedAt: "desc" },
       take: 8,
       select: {
@@ -163,7 +167,11 @@ export async function getCompanyExecutiveDashboard(companyId: string) {
       },
     }),
     prisma.keyResult.findMany({
-      where: { companyId, progressCached: { not: null } },
+      where: {
+        companyId,
+        progressCached: { not: null },
+        strategicObjective: { institutionalObjective: { includedInGeneralProgress: true } },
+      },
       orderBy: { progressCached: "asc" },
       take: 1,
       select: {
@@ -184,7 +192,11 @@ export async function getCompanyExecutiveDashboard(companyId: string) {
       },
     }),
     prisma.strategicObjective.findMany({
-      where: { companyId, progressCached: { not: null } },
+      where: {
+        companyId,
+        progressCached: { not: null },
+        institutionalObjective: { includedInGeneralProgress: true },
+      },
       orderBy: { progressCached: "asc" },
       take: 1,
       select: {
@@ -235,7 +247,11 @@ export async function getCompanyExecutiveDashboard(companyId: string) {
       },
     }),
     prisma.keyResult.findMany({
-      where: { companyId, progressCached: { not: null } },
+      where: {
+        companyId,
+        progressCached: { not: null },
+        strategicObjective: { institutionalObjective: { includedInGeneralProgress: true } },
+      },
       orderBy: { progressCached: "desc" },
       take: 6,
       select: {
@@ -249,6 +265,7 @@ export async function getCompanyExecutiveDashboard(companyId: string) {
       where: {
         companyId,
         progressCached: { gte: 80, lt: 100 },
+        institutionalObjective: { includedInGeneralProgress: true },
       },
       orderBy: { progressCached: "desc" },
       take: 6,
@@ -266,16 +283,19 @@ export async function getCompanyExecutiveDashboard(companyId: string) {
     }),
   ]);
 
-  const projectRows: ExecutiveProjectRow[] = projects.map((p) => ({
-    id: p.id,
-    title: p.title,
-    progressPercent: computeProjectProgressFromInstitutionalObjectives(
-      p.objectives.map((o) => ({
-        weight: Number(o.weight),
-        progress: o.progressCached != null ? Number(o.progressCached) : null,
-      }))
-    ),
-  }));
+  const projectRows: ExecutiveProjectRow[] = projects.map((p) => {
+    const inGeneral = p.objectives.filter((o) => o.includedInGeneralProgress);
+    return {
+      id: p.id,
+      title: p.title,
+      progressPercent: computeProjectProgressFromInstitutionalObjectives(
+        inGeneral.map((o) => ({
+          weight: Number(o.weight),
+          progress: o.progressCached != null ? Number(o.progressCached) : null,
+        }))
+      ),
+    };
+  });
 
   const portfolioProgressPercent =
     projectRows.length === 0

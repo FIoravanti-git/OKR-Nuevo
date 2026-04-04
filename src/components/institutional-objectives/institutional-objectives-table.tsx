@@ -52,7 +52,14 @@ const globalFilterFn: FilterFn<InstitutionalObjectiveAdminRow> = (row, _c, filte
     .toLowerCase();
   if (!q) return true;
   const r = row.original;
-  return [r.title, r.description ?? "", r.projectTitle, r.companyName, institutionalObjectiveStatusLabel(r.status)]
+  return [
+    r.title,
+    r.description ?? "",
+    r.projectTitle,
+    r.companyName,
+    institutionalObjectiveStatusLabel(r.status),
+    r.includedInGeneralProgress ? "" : "no impacta avance general seguimiento",
+  ]
     .join(" ")
     .toLowerCase()
     .includes(q);
@@ -119,9 +126,14 @@ export function InstitutionalObjectivesTable({
         accessorKey: "title",
         header: "Objetivo",
         cell: ({ row }) => (
-          <div className="flex min-w-0 flex-col gap-0.5">
+          <div className="flex min-w-0 flex-col gap-1">
             <span className="truncate font-medium">{row.original.title}</span>
             <span className="truncate text-xs text-muted-foreground">{row.original.projectTitle}</span>
+            {!row.original.includedInGeneralProgress ? (
+              <Badge variant="secondary" className="w-fit max-w-full whitespace-normal text-[11px] font-normal">
+                No impacta en el avance general
+              </Badge>
+            ) : null}
           </div>
         ),
       },

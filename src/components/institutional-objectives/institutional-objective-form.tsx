@@ -28,6 +28,7 @@ export type InstitutionalObjectiveFormFields = {
   sortOrder: string;
   institutionalProjectId: string;
   status: InstitutionalObjectiveStatus;
+  includedInGeneralProgress: boolean;
 };
 
 type InstitutionalObjectiveFormProps = {
@@ -58,12 +59,16 @@ export function InstitutionalObjectiveForm({
     register,
     handleSubmit,
     setError,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<InstitutionalObjectiveFormFields>({
     resolver,
     defaultValues,
     mode: "onTouched",
   });
+
+  const includedInGeneralProgress = watch("includedInGeneralProgress");
+  const weightLocked = !includedInGeneralProgress;
 
   async function onSubmit(values: InstitutionalObjectiveFormFields) {
     const r =
@@ -125,7 +130,7 @@ export function InstitutionalObjectiveForm({
       <Card className="border-border/80 shadow-sm">
         <CardHeader>
           <CardTitle className="text-base">Definición</CardTitle>
-          <CardDescription>Nombre, descripción y ponderación en la agregación.</CardDescription>
+          <CardDescription>Nombre, alcance del avance del proyecto, peso y orden.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-6 sm:grid-cols-2">
           <div className="space-y-2 sm:col-span-2">
@@ -138,19 +143,70 @@ export function InstitutionalObjectiveForm({
             />
             {errors.title ? <p className="text-xs text-destructive">{errors.title.message}</p> : null}
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="io-weight">Peso (ponderación)</Label>
+          <div className="flex items-start gap-3 sm:col-span-2 rounded-lg border border-border/60 bg-muted/15 p-4">
+            <input
+              id="io-included-general"
+              type="checkbox"
+              className="mt-1 size-4 shrink-0 rounded border-input accent-primary"
+              {...register("includedInGeneralProgress")}
+            />
+            <div className="min-w-0 space-y-1">
+              <Label htmlFor="io-included-general" className="cursor-pointer text-sm font-medium leading-snug">
+                Incluir en el avance general del proyecto
+              </Label>
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                Si lo desmarcás, el objetivo queda solo para seguimiento: su avance y el de lo que cuelga de él se
+                calculan igual, pero no modifican el porcentaje global del proyecto ni los promedios de tableros y
+                reportes consolidados.
+              </p>
+            </div>
+          </div>
+          <div
+            className={cn(
+              "space-y-2 rounded-lg border border-transparent p-1 transition-colors",
+              weightLocked && "border-border/50 bg-muted/25 opacity-90"
+            )}
+          >
+            <Label
+              htmlFor="io-weight"
+              className={cn(weightLocked && "text-muted-foreground")}
+            >
+              Peso (ponderación)
+            </Label>
             <Input
               id="io-weight"
               type="number"
               step="any"
               min="0"
+              readOnly={weightLocked}
+              tabIndex={weightLocked ? -1 : undefined}
               aria-invalid={!!errors.weight}
-              className={cn("tabular-nums", errors.weight && "border-destructive")}
+              aria-describedby={
+                [errors.weight ? "io-weight-err" : null, weightLocked ? "io-weight-scope-hint" : "io-weight-help"]
+                  .filter(Boolean)
+                  .join(" ") || undefined
+              }
+              className={cn(
+                "tabular-nums transition-opacity",
+                errors.weight && "border-destructive",
+                weightLocked && "cursor-not-allowed bg-muted/40 text-muted-foreground opacity-80"
+              )}
               {...register("weight")}
             />
-            {errors.weight ? <p className="text-xs text-destructive">{errors.weight.message}</p> : null}
-            <p className="text-xs text-muted-foreground">Usado al consolidar avances de objetivos clave hijos.</p>
+            {errors.weight ? (
+              <p id="io-weight-err" className="text-xs text-destructive">
+                {errors.weight.message}
+              </p>
+            ) : null}
+            {weightLocked ? (
+              <p id="io-weight-scope-hint" className="text-xs font-medium text-muted-foreground">
+                Este objetivo no impacta en el avance general. El peso se conserva por si volvés a incluirlo.
+              </p>
+            ) : (
+              <p id="io-weight-help" className="text-xs text-muted-foreground">
+                Usado al consolidar avances de objetivos clave hijos.
+              </p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="io-sort">Orden</Label>

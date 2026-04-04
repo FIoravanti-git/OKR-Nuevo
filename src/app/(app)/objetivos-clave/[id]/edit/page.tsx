@@ -10,6 +10,7 @@ import {
   canMutateStrategicObjectives,
   canViewStrategicObjective,
 } from "@/lib/strategic-objectives/policy";
+import { areaListWhere } from "@/lib/areas/policy";
 import { prisma } from "@/lib/prisma";
 
 type PageProps = { params: Promise<{ id: string }> };
@@ -56,8 +57,20 @@ export default async function EditObjetivoClavePage({ params }: PageProps) {
       title: io.title,
       projectTitle: io.institutionalProject.title,
       companyName: io.company.name,
+      companyId: row.companyId,
     },
   ];
+
+  const areasRaw = await prisma.area.findMany({
+    where: areaListWhere(session),
+    select: { id: true, name: true, companyId: true },
+    orderBy: { name: "asc" },
+  });
+  const areaOptions = areasRaw.map((a) => ({
+    id: a.id,
+    name: a.name,
+    companyId: a.companyId,
+  }));
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
@@ -81,6 +94,7 @@ export default async function EditObjetivoClavePage({ params }: PageProps) {
         strategicId={row.id}
         viewerRole={session.role}
         institutionalObjectives={institutionalObjectives}
+        areaOptions={areaOptions}
         defaultValues={{
           title: row.title,
           description: row.description ?? "",
@@ -88,6 +102,7 @@ export default async function EditObjetivoClavePage({ params }: PageProps) {
           sortOrder: String(row.sortOrder),
           institutionalObjectiveId: row.institutionalObjectiveId,
           status: row.status,
+          areaId: row.areaId ?? "",
         }}
         cancelHref={`/objetivos-clave/${id}`}
       />

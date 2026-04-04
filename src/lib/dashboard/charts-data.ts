@@ -58,7 +58,7 @@ export async function getCompanyDashboardCharts(
 
   const [objectives, statusGroups, krHigh, krLow] = await Promise.all([
     prisma.institutionalObjective.findMany({
-      where: { companyId, progressCached: { not: null } },
+      where: { companyId, progressCached: { not: null }, includedInGeneralProgress: true },
       orderBy: { title: "asc" },
       take: 14,
       select: { id: true, title: true, progressCached: true },
@@ -69,13 +69,21 @@ export async function getCompanyDashboardCharts(
       _count: { _all: true },
     }),
     prisma.keyResult.findMany({
-      where: { companyId, progressCached: { not: null } },
+      where: {
+        companyId,
+        progressCached: { not: null },
+        strategicObjective: { institutionalObjective: { includedInGeneralProgress: true } },
+      },
       orderBy: { progressCached: "desc" },
       take: 6,
       select: krSelect,
     }),
     prisma.keyResult.findMany({
-      where: { companyId, progressCached: { not: null } },
+      where: {
+        companyId,
+        progressCached: { not: null },
+        strategicObjective: { institutionalObjective: { includedInGeneralProgress: true } },
+      },
       orderBy: { progressCached: "asc" },
       take: 6,
       select: krSelect,

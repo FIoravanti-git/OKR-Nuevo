@@ -70,6 +70,8 @@ const globalFilterFn: FilterFn<ActivityAdminRow> = (row, _c, filterValue) => {
     r.assigneeName ?? "",
     r.assigneeEmail ?? "",
     r.companyName,
+    r.contributionWeight,
+    r.dependsOnTitle ?? "",
     activityStatusLabel(r.status),
     ...(isActivityOverdue(r.dueDate, r.status) ? [activityOverdueLabel()] : []),
   ]
@@ -264,7 +266,7 @@ export function ActivitiesTable({
       },
       {
         accessorKey: "impactsProgress",
-        header: "Impacta KR",
+        header: "Impacta indicador",
         cell: ({ row }) =>
           row.original.impactsProgress ? (
             <Badge className="font-normal text-xs">Sí</Badge>
@@ -273,6 +275,79 @@ export function ActivitiesTable({
               No
             </Badge>
           ),
+      },
+      {
+        id: "dependency",
+        header: "Dependencia",
+        cell: ({ row }) => {
+          const r = row.original;
+          if (!r.dependsOnActivityId) {
+            return <span className="text-xs text-muted-foreground">—</span>;
+          }
+          return (
+            <div className="flex max-w-[220px] flex-col gap-1">
+              <span className="line-clamp-2 text-xs leading-snug">{r.dependsOnTitle ?? "—"}</span>
+              <div className="flex flex-wrap gap-1">
+                <Badge variant="outline" className="text-[10px] font-normal">
+                  Con dependencia
+                </Badge>
+                {r.blockedByDependency ? (
+                  <Badge
+                    variant="secondary"
+                    className="border-amber-500/30 text-[10px] font-normal text-amber-950 dark:text-amber-100"
+                  >
+                    Bloqueada
+                  </Badge>
+                ) : (
+                  <Badge className="text-[10px] font-normal">Cumplida</Badge>
+                )}
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        id: "actualStart",
+        header: "Inicio real",
+        cell: ({ row }) => {
+          const iso = row.original.actualStartDate;
+          if (!iso) return <span className="text-xs text-muted-foreground">—</span>;
+          return <span className="text-xs tabular-nums">{formatDate(iso)}</span>;
+        },
+      },
+      {
+        id: "depScheduleRisk",
+        header: "Calendario",
+        cell: ({ row }) => {
+          const r = row.original;
+          if (r.delayedStartVsPlanned) {
+            return (
+              <Badge variant="outline" className="text-[10px] font-normal text-amber-950 dark:text-amber-100">
+                Atrasada (inicio)
+              </Badge>
+            );
+          }
+          if (r.plannedStartAtRisk) {
+            return (
+              <Badge variant="outline" className="text-[10px] font-normal text-amber-900 dark:text-amber-100">
+                Riesgo por dep.
+              </Badge>
+            );
+          }
+          return <span className="text-xs text-muted-foreground">—</span>;
+        },
+      },
+      {
+        accessorKey: "contributionWeight",
+        header: "Peso",
+        cell: ({ row }) => {
+          const w = row.original.contributionWeight;
+          const n = Number(w);
+          if (!row.original.impactsProgress || !Number.isFinite(n) || n <= 0) {
+            return <span className="text-xs text-muted-foreground">—</span>;
+          }
+          return <span className="text-xs tabular-nums">{w}</span>;
+        },
       },
       {
         accessorKey: "status",
@@ -309,8 +384,8 @@ export function ActivitiesTable({
       <div className="rounded-xl border border-border/80 bg-gradient-to-br from-muted/35 via-background to-background px-4 py-3.5">
         <p className="text-sm font-medium text-foreground">Operativa OKR</p>
         <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-          Las actividades viven bajo un resultado clave. El avance puede alimentar el cálculo del KR según impacto y
-          peso; la bitácora queda en `activity_progress_logs`.
+          Cada tarea está bajo un resultado clave. El avance puede sumar al indicador según impacto y peso; los cambios
+          de avance quedan registrados en el historial.
         </p>
       </div>
       <div className="flex flex-col gap-3">

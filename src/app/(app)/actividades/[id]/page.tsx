@@ -18,6 +18,11 @@ import {
   canViewActivity,
 } from "@/lib/activities/policy";
 import { ActivityOverdueBadge } from "@/components/activities/activity-overdue-badge";
+import {
+  isBlockedByPredecessor,
+  isDelayedStartVsPlanned,
+  plannedStartPassedWhileBlocked,
+} from "@/lib/activities/dependency";
 import { isActivityOverdue } from "@/lib/activities/overdue";
 import { activityStatusLabel, formatDate } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
@@ -38,6 +43,7 @@ export default async function ActividadDetailPage({ params }: PageProps) {
     include: {
       assignee: { select: { id: true, name: true, email: true } },
       company: { select: { name: true } },
+      dependsOnActivity: { select: { id: true, title: true, status: true } },
       keyResult: {
         select: {
           id: true,
@@ -93,6 +99,19 @@ export default async function ActividadDetailPage({ params }: PageProps) {
 
   const overdue = isActivityOverdue(row.dueDate, row.status);
 
+  const pred = row.dependsOnActivity;
+  const predStatus = row.dependsOnActivityId ? (pred?.status ?? null) : null;
+  const blockedByDependency = isBlockedByPredecessor(row.dependsOnActivityId, predStatus);
+  const delayedStartVsPlanned = isDelayedStartVsPlanned({
+    startDate: row.startDate,
+    actualStartDate: row.actualStartDate,
+  });
+  const plannedStartAtRisk = plannedStartPassedWhileBlocked({
+    startDate: row.startDate,
+    dependsOnActivityId: row.dependsOnActivityId,
+    predecessorStatus: predStatus,
+  });
+
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -117,15 +136,45 @@ export default async function ActividadDetailPage({ params }: PageProps) {
               Avance {formatProgress(progress)}
             </Badge>
             {row.impactsProgress ? (
-              <Badge className="font-normal text-xs">Impacta KR</Badge>
+              <Badge className="font-normal text-xs">Impacta el indicador</Badge>
             ) : (
               <Badge variant="secondary" className="font-normal text-xs">
-                No impacta KR
+                No impacta el indicador
               </Badge>
             )}
-            <Badge variant="outline" className="font-normal tabular-nums">
-              Peso {row.contributionWeight.toString()}
-            </Badge>
+            {row.impactsProgress && Number(row.contributionWeight) > 0 ? (
+              <Badge variant="outline" className="font-normal tabular-nums">
+                Peso de impacto {row.contributionWeight.toString()}
+              </Badge>
+            ) : null}
+            {row.dependsOnActivityId ? (
+              <Badge variant="outline" className="font-normal text-xs">
+                Con dependencia
+              </Badge>
+            ) : null}
+            {blockedByDependency ? (
+              <Badge
+                variant="secondary"
+                className="border-amber-500/30 font-normal text-xs text-amber-950 dark:text-amber-100"
+              >
+                Bloqueada por dependencia
+              </Badge>
+            ) : null}
+            {row.actualStartDate ? (
+              <Badge variant="outline" className="font-normal text-xs tabular-nums">
+                Inicio real {formatDate(row.actualStartDate)}
+              </Badge>
+            ) : null}
+            {delayedStartVsPlanned ? (
+              <Badge variant="outline" className="font-normal text-xs text-amber-950 dark:text-amber-100">
+                Atrasada por dependencia / calendario
+              </Badge>
+            ) : null}
+            {plannedStartAtRisk && !delayedStartVsPlanned ? (
+              <Badge variant="outline" className="font-normal text-xs text-amber-900 dark:text-amber-100">
+                Riesgo: plan vs dependencia
+              </Badge>
+            ) : null}
           </div>
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
@@ -144,6 +193,7 @@ export default async function ActividadDetailPage({ params }: PageProps) {
             activityId={row.id}
             defaultStatus={row.status}
             defaultProgressInput={defaultProgressInput}
+            blockedByDependency={blockedByDependency}
           />
         </div>
       ) : null}
@@ -198,7 +248,7 @@ export default async function ActividadDetailPage({ params }: PageProps) {
             ) : null}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <p className="text-muted-foreground">Inicio</p>
+                <p className="text-muted-foreground">Inicio planificado</p>
                 <p className="font-medium">{row.startDate ? formatDate(row.startDate) : "—"}</p>
               </div>
               <div>
@@ -211,6 +261,10 @@ export default async function ActividadDetailPage({ params }: PageProps) {
                 >
                   {row.dueDate ? formatDate(row.dueDate) : "—"}
                 </p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Inicio real</p>
+                <p className="font-medium">{row.actualStartDate ? formatDate(row.actualStartDate) : "—"}</p>
               </div>
             </div>
             <Separator />
@@ -227,6 +281,60 @@ export default async function ActividadDetailPage({ params }: PageProps) {
             </div>
           </CardContent>
         </Card>
+
+        {row.dependsOnActivityId ? (
+          <Card className="border-border/80 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-base">Dependencia</CardTitle>
+              <CardDescription>Fin → inicio: esta tarea espera a que otra esté hecha.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div>
+                <p className="text-muted-foreground">Depender de</p>
+                {pred ? (
+                  <Button
+                    variant="link"
+                    className="h-auto p-0 font-medium"
+                    render={<Link href={`/actividades/${pred.id}`} />}
+                  >
+                    {pred.title}
+                  </Button>
+                ) : (
+                  <p className="text-muted-foreground">Predecesora no disponible</p>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {pred?.status === "DONE" ? (
+                  <Badge className="font-normal text-xs">Dependencia cumplida</Badge>
+                ) : (
+                  <Badge variant="secondary" className="font-normal text-xs">
+                    Dependencia pendiente
+                  </Badge>
+                )}
+                {blockedByDependency ? (
+                  <Badge
+                    variant="outline"
+                    className="border-amber-500/40 font-normal text-xs text-amber-950 dark:text-amber-100"
+                  >
+                    Bloqueada por dependencia
+                  </Badge>
+                ) : null}
+              </div>
+              {plannedStartAtRisk ? (
+                <p className="text-xs text-amber-800 dark:text-amber-200">
+                  El inicio planificado ya pasó y la predecesora sigue pendiente: el calendario original está en riesgo
+                  (no se replanifica solo).
+                </p>
+              ) : null}
+              {delayedStartVsPlanned ? (
+                <p className="text-xs text-amber-800 dark:text-amber-200">
+                  El inicio real es posterior al planificado: se perdió tiempo respecto del plan (p. ej. por esperar la
+                  dependencia).
+                </p>
+              ) : null}
+            </CardContent>
+          </Card>
+        ) : null}
 
         <Card className="border-border/80 shadow-sm">
           <CardHeader>

@@ -6,6 +6,11 @@ import { SuperAdminTenantNotice } from "@/components/layout/super-admin-tenant-n
 import { Button } from "@/components/ui/button";
 import { requireSessionUser } from "@/lib/auth/session-user";
 import { activityListWhere, canMutateActivities } from "@/lib/activities/policy";
+import {
+  isBlockedByPredecessor,
+  isDelayedStartVsPlanned,
+  plannedStartPassedWhileBlocked,
+} from "@/lib/activities/dependency";
 import { prisma } from "@/lib/prisma";
 import type { ActivityAdminRow } from "@/types/activity-admin";
 import type { Prisma } from "@/generated/prisma";
@@ -40,6 +45,7 @@ export default async function ActividadesPage({ searchParams }: PageProps) {
       include: {
         assignee: { select: { id: true, name: true, email: true } },
         company: { select: { name: true } },
+        dependsOnActivity: { select: { id: true, title: true, status: true } },
         keyResult: {
           select: {
             id: true,
@@ -72,6 +78,11 @@ export default async function ActividadesPage({ searchParams }: PageProps) {
     const so = kr.strategicObjective;
     const io = so.institutionalObjective;
     const p = io.institutionalProject;
+    const pred = a.dependsOnActivity;
+    const predStatus = pred?.status ?? null;
+    const hasDep = Boolean(a.dependsOnActivityId);
+    const dependencySatisfied = !hasDep || predStatus === "DONE";
+    const blockedByDependency = isBlockedByPredecessor(a.dependsOnActivityId, predStatus);
     return {
       id: a.id,
       title: a.title,
@@ -82,6 +93,21 @@ export default async function ActividadesPage({ searchParams }: PageProps) {
       progressContribution: a.progressContribution != null ? Number(a.progressContribution) : null,
       startDate: a.startDate ? a.startDate.toISOString() : null,
       dueDate: a.dueDate ? a.dueDate.toISOString() : null,
+      actualStartDate: a.actualStartDate ? a.actualStartDate.toISOString() : null,
+      dependsOnActivityId: a.dependsOnActivityId,
+      dependsOnTitle: pred?.title ?? null,
+      dependsOnStatus: predStatus,
+      dependencySatisfied,
+      blockedByDependency,
+      plannedStartAtRisk: plannedStartPassedWhileBlocked({
+        startDate: a.startDate,
+        dependsOnActivityId: a.dependsOnActivityId,
+        predecessorStatus: predStatus,
+      }),
+      delayedStartVsPlanned: isDelayedStartVsPlanned({
+        startDate: a.startDate,
+        actualStartDate: a.actualStartDate,
+      }),
       createdAt: a.createdAt.toISOString(),
       companyId: a.companyId,
       companyName: a.company.name,

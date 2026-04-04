@@ -52,7 +52,8 @@ export async function createInstitutionalObjective(input: unknown): Promise<Inst
     return { ok: false, message: "No podés crear objetivos para ese proyecto." };
   }
 
-  const { title, description, weight, sortOrder, institutionalProjectId, status } = parsed.data;
+  const { title, description, weight, sortOrder, institutionalProjectId, status, includedInGeneralProgress } =
+    parsed.data;
 
   const created = await prisma.institutionalObjective.create({
     data: {
@@ -63,6 +64,7 @@ export async function createInstitutionalObjective(input: unknown): Promise<Inst
       weight: new Prisma.Decimal(String(weight)),
       sortOrder,
       status,
+      includedInGeneralProgress,
       progressCached: null,
     },
   });
@@ -112,7 +114,7 @@ export async function updateInstitutionalObjective(
     return { ok: false, message: "No se puede cambiar el proyecto institucional asociado." };
   }
 
-  const { title, description, weight, sortOrder, status } = parsed.data;
+  const { title, description, weight, sortOrder, status, includedInGeneralProgress } = parsed.data;
 
   await prisma.institutionalObjective.update({
     where: { id: objectiveId },
@@ -122,6 +124,7 @@ export async function updateInstitutionalObjective(
       weight: new Prisma.Decimal(String(weight)),
       sortOrder,
       status,
+      includedInGeneralProgress,
     },
   });
 

@@ -75,6 +75,7 @@ export default async function EditObjetivoInstitucionalPage({ params }: PageProp
           sortOrder: String(objective.sortOrder),
           institutionalProjectId: objective.institutionalProjectId,
           status: objective.status,
+          includedInGeneralProgress: objective.includedInGeneralProgress,
         }}
         cancelHref={`/objetivos/${id}`}
       />

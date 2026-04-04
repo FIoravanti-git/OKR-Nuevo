@@ -14,6 +14,10 @@ export const routeRolePolicies: { match: (pathname: string) => boolean; roles: U
     roles: ["SUPER_ADMIN", "ADMIN_EMPRESA"],
   },
   {
+    match: (p) => p === "/areas" || p.startsWith("/areas/"),
+    roles: ["SUPER_ADMIN", "ADMIN_EMPRESA"],
+  },
+  {
     match: (p) => p === "/equipo" || p.startsWith("/equipo/"),
     roles: ["SUPER_ADMIN", "ADMIN_EMPRESA"],
   },

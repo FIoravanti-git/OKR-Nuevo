@@ -15,12 +15,19 @@ export const activityFormSchema = z.object({
   ),
   startDate: z.string().optional(),
   dueDate: z.string().optional(),
+  /** Vacío = sin dependencia (fin → inicio). */
+  dependsOnActivityId: z
+    .string()
+    .optional()
+    .transform((s) => {
+      if (s == null) return undefined;
+      const t = s.trim();
+      return t === "" ? undefined : t;
+    }),
   status: z.enum(["PLANNED", "IN_PROGRESS", "DONE", "BLOCKED", "CANCELLED"]),
   impactsProgress: z.boolean(),
-  contributionWeight: z.coerce
-    .number({ message: "Peso numérico requerido" })
-    .positive("El peso debe ser mayor a 0")
-    .max(1_000_000, "Peso demasiado alto"),
+  /** Texto numérico; si la tarea no impacta el KR, puede ir vacío (se guarda 0 en BD). */
+  contributionWeight: z.string(),
   /** Vacío = sin porcentaje (`null` en BD). */
   progressContributionStr: z.string(),
   /** Observación opcional en el historial si cambia avance o estado. */
@@ -39,6 +46,34 @@ export const activityFormSchema = z.object({
         code: "custom",
         message: "Avance entre 0 y 100, o vacío",
         path: ["progressContributionStr"],
+      });
+    }
+  })
+  .superRefine((data, ctx) => {
+    if (!data.impactsProgress) return;
+    const tw = data.contributionWeight.trim();
+    if (tw === "") {
+      ctx.addIssue({
+        code: "custom",
+        message: "Indicá el peso de impacto (mayor a 0).",
+        path: ["contributionWeight"],
+      });
+      return;
+    }
+    const n = Number(tw.replace(",", "."));
+    if (!Number.isFinite(n) || n <= 0) {
+      ctx.addIssue({
+        code: "custom",
+        message: "El peso debe ser mayor a 0.",
+        path: ["contributionWeight"],
+      });
+      return;
+    }
+    if (n > 1_000_000) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Peso demasiado alto.",
+        path: ["contributionWeight"],
       });
     }
   });

@@ -18,6 +18,7 @@ export const strategicObjectiveFormSchema = z.object({
   ),
   institutionalObjectiveId: z.string().min(1, "Seleccioná un objetivo institucional"),
   status: z.enum(["DRAFT", "ACTIVE", "AT_RISK", "COMPLETED", "CANCELLED"]),
+  areaId: z.string().trim().min(1, "Seleccioná un área."),
 });
 
 export const strategicObjectiveStatusSchema = z.enum([

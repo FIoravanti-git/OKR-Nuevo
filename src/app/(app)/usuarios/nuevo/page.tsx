@@ -2,6 +2,7 @@ import { PageHeading } from "@/components/layout/page-heading";
 import { UserForm, type UserFormFields } from "@/components/usuarios/user-form";
 import type { UserRole } from "@/generated/prisma";
 import { requireSessionUser } from "@/lib/auth/session-user";
+import { areaListWhere } from "@/lib/areas/policy";
 import { prisma } from "@/lib/prisma";
 import { rolesCreatableBy } from "@/lib/users/policy";
 
@@ -10,13 +11,21 @@ const ROLE_ORDER: UserRole[] = ["SUPER_ADMIN", "ADMIN_EMPRESA", "OPERADOR"];
 export default async function NuevoUsuarioPage() {
   const session = await requireSessionUser();
 
-  const companies =
+  const [companies, areasRaw] = await Promise.all([
     session.role === "SUPER_ADMIN"
-      ? await prisma.company.findMany({
+      ? prisma.company.findMany({
           select: { id: true, name: true },
           orderBy: { name: "asc" },
         })
-      : [];
+      : Promise.resolve([]),
+    prisma.area.findMany({
+      where: areaListWhere(session),
+      select: { id: true, name: true, companyId: true },
+      orderBy: { name: "asc" },
+    }),
+  ]);
+
+  const areas = areasRaw.map((a) => ({ id: a.id, name: a.name, companyId: a.companyId }));
 
   const creatable = rolesCreatableBy(session);
   const allowedRoles = ROLE_ORDER.filter((r) => creatable.includes(r));
@@ -29,6 +38,7 @@ export default async function NuevoUsuarioPage() {
     password: "",
     role: defaultRole,
     companyId: session.role === "ADMIN_EMPRESA" && session.companyId ? session.companyId : "",
+    areaId: "",
     isActive: true,
   };
 
@@ -53,6 +63,7 @@ export default async function NuevoUsuarioPage() {
         viewerRole={session.role}
         viewerCompanyId={session.companyId}
         companies={companiesForForm}
+        areas={areas}
         allowedRoles={allowedRoles}
         defaultValues={defaultValues}
         cancelHref="/usuarios"

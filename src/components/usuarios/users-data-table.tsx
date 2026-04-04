@@ -16,6 +16,7 @@ type UsersDataTableProps = {
   data: UserAdminRow[];
   viewerRole: UserRole;
   viewerId: string;
+  viewerCanMutate: boolean;
   companies: CompanyOption[];
 };
 
@@ -25,13 +26,16 @@ const usersGlobalFilterFn: FilterFn<UserAdminRow> = (row, _columnId, filterValue
     .toLowerCase();
   if (!q) return true;
   const r = row.original;
-  return [r.name, r.email, r.companyName ?? "", roleLabel(r.role)].join(" ").toLowerCase().includes(q);
+  return [r.name, r.email, r.companyName ?? "", r.areaName ?? "", roleLabel(r.role)]
+    .join(" ")
+    .toLowerCase()
+    .includes(q);
 };
 
 const selectClass =
   "h-9 min-w-[140px] rounded-lg border border-border/80 bg-background px-2.5 text-sm text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 dark:bg-input/30";
 
-export function UsersDataTable({ data, viewerRole, viewerId, companies }: UsersDataTableProps) {
+export function UsersDataTable({ data, viewerRole, viewerId, viewerCanMutate, companies }: UsersDataTableProps) {
   const [estado, setEstado] = useState<"all" | "active" | "inactive">("all");
   const [roleFilter, setRoleFilter] = useState<"all" | UserRole>("all");
   const [companyFilter, setCompanyFilter] = useState<string>("all");
@@ -68,6 +72,15 @@ export function UsersDataTable({ data, viewerRole, viewerId, companies }: UsersD
           <Badge variant="secondary" className="max-w-[200px] truncate font-normal">
             {roleLabel(row.original.role)}
           </Badge>
+        ),
+      },
+      {
+        accessorKey: "areaName",
+        header: "Área",
+        cell: ({ row }) => (
+          <span className="max-w-[180px] truncate text-sm text-muted-foreground">
+            {row.original.areaName ?? "—"}
+          </span>
         ),
       },
       ...(viewerRole === "SUPER_ADMIN"
@@ -109,13 +122,19 @@ export function UsersDataTable({ data, viewerRole, viewerId, companies }: UsersD
         header: "",
         cell: ({ row }) => (
           <div className="flex justify-end">
-            <UserRowActions userId={row.original.id} isActive={row.original.isActive} viewerId={viewerId} />
+            <UserRowActions
+              userId={row.original.id}
+              isActive={row.original.isActive}
+              viewerId={viewerId}
+              canDelete={row.original.canDelete}
+              viewerCanMutate={viewerCanMutate}
+            />
           </div>
         ),
         enableSorting: false,
       },
     ],
-    [viewerRole, viewerId]
+    [viewerRole, viewerId, viewerCanMutate]
   );
 
   return (

@@ -152,3 +152,20 @@ export function keyResultProgressLogSourceLabel(source: string): string {
   };
   return map[source] ?? source;
 }
+
+export function areaStatusLabel(status: string): string {
+  const map: Record<string, string> = {
+    ACTIVE: "Activa",
+    INACTIVE: "Inactiva",
+  };
+  return map[status] ?? status;
+}
+
+/** Texto compacto para listados: "Ana", "Ana y Luis", "Ana, Luis y 2 más". */
+export function formatResponsablesList(names: string[]): string {
+  const n = names.map((s) => s.trim()).filter(Boolean);
+  if (n.length === 0) return "";
+  if (n.length === 1) return n[0]!;
+  if (n.length === 2) return `${n[0]} y ${n[1]}`;
+  return `${n[0]}, ${n[1]} y ${n.length - 2} más`;
+}

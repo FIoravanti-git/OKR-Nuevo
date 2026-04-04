@@ -106,6 +106,7 @@ export default async function ProyectoInstitucionalDetailPage({ params }: PagePr
         status: true,
         progressCached: true,
         weight: true,
+        includedInGeneralProgress: true,
         strategicObjectives: {
           orderBy: [{ sortOrder: "asc" }, { title: "asc" }],
           select: {
@@ -142,10 +143,12 @@ export default async function ProyectoInstitucionalDetailPage({ params }: PagePr
 
   const institutionalObjectivesCount = project._count.objectives;
   const generalProgressComputed = computeProjectProgressFromInstitutionalObjectives(
-    hierarchy.map((io) => ({
-      weight: Number(io.weight),
-      progress: io.progressCached != null ? Number(io.progressCached) : null,
-    }))
+    hierarchy
+      .filter((io) => io.includedInGeneralProgress)
+      .map((io) => ({
+        weight: Number(io.weight),
+        progress: io.progressCached != null ? Number(io.progressCached) : null,
+      }))
   );
   const generalProgress =
     project.progressCached != null && !Number.isNaN(Number(project.progressCached))
@@ -186,7 +189,8 @@ export default async function ProyectoInstitucionalDetailPage({ params }: PagePr
           <div className="max-w-md border-t border-border/60 pt-3">
             <p className="text-xs font-medium text-foreground">Progreso general del proyecto</p>
             <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
-              Promedio ponderado según el peso de cada objetivo institucional.
+              Promedio ponderado por peso, solo entre objetivos institucionales marcados para incluir en el avance
+              general.
             </p>
             <ProgressInline value={generalProgress} className="mt-2" />
           </div>
@@ -229,7 +233,7 @@ export default async function ProyectoInstitucionalDetailPage({ params }: PagePr
             <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
               <p className="text-xs text-muted-foreground">Progreso general</p>
               <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
-                Promedio ponderado por peso de cada objetivo institucional.
+                Solo objetivos institucionales que suman al avance general (excluye los de solo seguimiento).
               </p>
               <p className="mt-1 text-sm font-semibold tabular-nums text-foreground">{formatProgress(generalProgress)}</p>
               <ProgressInline value={generalProgress} className="mt-1 min-w-0" />
@@ -283,7 +287,14 @@ export default async function ProyectoInstitucionalDetailPage({ params }: PagePr
                 <details key={io.id} className="group rounded-xl border border-border/70 bg-muted/15 open:bg-muted/25">
                   <summary className="cursor-pointer list-none p-3">
                     <div className="grid gap-2 sm:grid-cols-[minmax(240px,1fr)_auto_auto_auto] sm:items-center">
-                      <p className="min-w-0 truncate text-sm font-semibold text-foreground">{io.title}</p>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-foreground">{io.title}</p>
+                        {!io.includedInGeneralProgress ? (
+                          <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+                            No impacta en el avance general
+                          </p>
+                        ) : null}
+                      </div>
                       <Badge variant="outline" className="w-fit font-normal">
                         {institutionalObjectiveStatusLabel(io.status)}
                       </Badge>

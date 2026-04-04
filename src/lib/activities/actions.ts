@@ -7,7 +7,12 @@
 
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@/generated/prisma";
-import type { ActivityStatus } from "@/generated/prisma";
+import type { ActivityStatus, ProgressCalculationMode } from "@/generated/prisma";
+import {
+  assertCanStartOrProgress,
+  shouldSetActualStartDate,
+  utcTodayStart,
+} from "@/lib/activities/dependency";
 import { requireSessionUser } from "@/lib/auth/session-user";
 import {
   canMutateActivities,
@@ -24,6 +29,7 @@ import { revalidateOkrHierarchyPaths } from "@/lib/okr/revalidate-okr-paths";
 import { rollupKeyResultChainFromKeyResultId } from "@/lib/okr/rollup-key-result-chain";
 import { canMutateKeyResult } from "@/lib/key-results/policy";
 import { prisma } from "@/lib/prisma";
+import { keyResultUsesWeightedActivityAggregation } from "@/lib/okr/key-result-activity-aggregation";
 
 export type ActivityActionResult =
   | { ok: true }
@@ -49,6 +55,29 @@ function parseProgressPercentStr(s: string): number | null {
   const t = s.trim();
   if (t === "") return null;
   return Number(Number(t.replace(",", ".")).toFixed(2));
+}
+
+function resolvePersistedContributionWeight(params: {
+  raw: string;
+  impactsProgress: boolean;
+  allowActivityImpact: boolean;
+  progressMode: ProgressCalculationMode;
+}): { decimal: Prisma.Decimal; fieldError?: string } {
+  if (!params.impactsProgress || !params.allowActivityImpact) {
+    return { decimal: new Prisma.Decimal(0) };
+  }
+  if (!keyResultUsesWeightedActivityAggregation(params.progressMode)) {
+    return { decimal: new Prisma.Decimal(1) };
+  }
+  const t = params.raw.trim().replace(",", ".");
+  const n = Number(t);
+  if (!Number.isFinite(n) || n <= 0) {
+    return { decimal: new Prisma.Decimal(0), fieldError: "Indicá un peso de impacto mayor a 0." };
+  }
+  if (n > 1_000_000) {
+    return { decimal: new Prisma.Decimal(0), fieldError: "Peso demasiado alto." };
+  }
+  return { decimal: new Prisma.Decimal(String(n)) };
 }
 
 /** Estado derivado solo del % (0–100); no usar con BLOQUEADA/CANCELADA. */
@@ -128,13 +157,77 @@ async function revalidateActivityScope(keyResultId: string, activityId?: string)
   });
 }
 
-async function assertAssigneeInCompany(assigneeUserId: string | undefined, companyId: string) {
+async function assertAssigneeAllowed(
+  assigneeUserId: string | undefined,
+  companyId: string,
+  restrictedAreaId: string | null
+) {
   if (!assigneeUserId) return null;
-  const u = await prisma.user.findFirst({
-    where: { id: assigneeUserId, companyId, isActive: true },
+  const where: Prisma.UserWhereInput = {
+    id: assigneeUserId,
+    companyId,
+    isActive: true,
+  };
+  if (restrictedAreaId) {
+    where.areaMemberships = { some: { areaId: restrictedAreaId } };
+  }
+  return prisma.user.findFirst({
+    where,
     select: { id: true },
   });
-  return u;
+}
+
+async function validateDependsOnInput(params: {
+  companyId: string;
+  editingActivityId?: string;
+  dependsOnActivityId: string | undefined;
+}): Promise<
+  | { ok: true; predecessorStatus: ActivityStatus | null }
+  | { ok: false; message: string; fieldErrors?: Record<string, string[]> }
+> {
+  if (!params.dependsOnActivityId) {
+    return { ok: true, predecessorStatus: null };
+  }
+  if (params.editingActivityId && params.dependsOnActivityId === params.editingActivityId) {
+    return {
+      ok: false,
+      message: "Una actividad no puede depender de sí misma.",
+      fieldErrors: { dependsOnActivityId: ["Elegí otra actividad."] },
+    };
+  }
+  const pred = await prisma.activity.findFirst({
+    where: { id: params.dependsOnActivityId, companyId: params.companyId },
+    select: { id: true, status: true },
+  });
+  if (!pred) {
+    return {
+      ok: false,
+      message: "La actividad predecesora no existe o no pertenece a la misma empresa.",
+      fieldErrors: { dependsOnActivityId: ["Predecesora no válida."] },
+    };
+  }
+  let cur: string | null = params.dependsOnActivityId;
+  const visited = new Set<string>();
+  while (cur) {
+    if (params.editingActivityId && cur === params.editingActivityId) {
+      return {
+        ok: false,
+        message: "Esa dependencia generaría un ciclo entre actividades.",
+        fieldErrors: { dependsOnActivityId: ["Elegí otra actividad."] },
+      };
+    }
+    if (visited.has(cur)) break;
+    visited.add(cur);
+    const nextPredId: string | null =
+      (
+        await prisma.activity.findUnique({
+          where: { id: cur },
+          select: { dependsOnActivityId: true },
+        })
+      )?.dependsOnActivityId ?? null;
+    cur = nextPredId;
+  }
+  return { ok: true, predecessorStatus: pred.status };
 }
 
 async function appendActivityLogIfChanged(params: {
@@ -193,7 +286,14 @@ export async function createActivity(input: unknown): Promise<ActivityActionResu
 
   const kr = await prisma.keyResult.findUnique({
     where: { id: parsed.data.keyResultId },
-    select: { id: true, companyId: true },
+    select: {
+      id: true,
+      companyId: true,
+      areaId: true,
+      allowActivityImpact: true,
+      progressMode: true,
+      strategicObjective: { select: { areaId: true } },
+    },
   });
   if (!kr) {
     return { ok: false, message: "El resultado clave no existe." };
@@ -202,9 +302,19 @@ export async function createActivity(input: unknown): Promise<ActivityActionResu
     return { ok: false, message: "No podés crear actividades para ese resultado clave." };
   }
 
-  const assignee = await assertAssigneeInCompany(parsed.data.assigneeUserId, kr.companyId);
+  const restrictedAreaId = kr.areaId ?? kr.strategicObjective.areaId ?? null;
+  const assignee = await assertAssigneeAllowed(
+    parsed.data.assigneeUserId,
+    kr.companyId,
+    restrictedAreaId
+  );
   if (parsed.data.assigneeUserId && !assignee) {
-    return { ok: false, message: "El responsable debe ser un usuario activo de la misma empresa." };
+    return {
+      ok: false,
+      message: restrictedAreaId
+        ? "El responsable tiene que ser una persona activa que pertenezca al equipo del área de este resultado clave."
+        : "El responsable debe ser un usuario activo de la misma empresa.",
+    };
   }
 
   const d = parsed.data;
@@ -223,6 +333,52 @@ export async function createActivity(input: unknown): Promise<ActivityActionResu
     previousImpactsProgress: d.impactsProgress,
   });
 
+  const finalImpacts = kr.allowActivityImpact ? normalized.impactsProgress : false;
+
+  const weightOutcome = resolvePersistedContributionWeight({
+    raw: d.contributionWeight,
+    impactsProgress: finalImpacts,
+    allowActivityImpact: kr.allowActivityImpact,
+    progressMode: kr.progressMode,
+  });
+  if (weightOutcome.fieldError) {
+    return {
+      ok: false,
+      message: "Revisá el peso de impacto.",
+      fieldErrors: { contributionWeight: [weightOutcome.fieldError] },
+    };
+  }
+
+  const depRes = await validateDependsOnInput({
+    companyId: kr.companyId,
+    dependsOnActivityId: d.dependsOnActivityId,
+  });
+  if (!depRes.ok) {
+    return {
+      ok: false,
+      message: depRes.message,
+      fieldErrors: depRes.fieldErrors,
+    };
+  }
+
+  const depGate = assertCanStartOrProgress({
+    dependsOnActivityId: d.dependsOnActivityId ?? null,
+    predecessorStatus: depRes.predecessorStatus,
+    effectiveStatus,
+    progressPercent: normalized.progress,
+  });
+  if (!depGate.ok) {
+    return { ok: false, message: depGate.message };
+  }
+
+  const setActualStart = shouldSetActualStartDate({
+    previousActualStart: null,
+    dependsOnActivityId: d.dependsOnActivityId ?? null,
+    predecessorStatus: depRes.predecessorStatus,
+    effectiveStatus,
+    progressPercent: normalized.progress,
+  });
+
   await prisma.activity.create({
     data: {
       companyId: kr.companyId,
@@ -232,9 +388,11 @@ export async function createActivity(input: unknown): Promise<ActivityActionResu
       assigneeUserId: d.assigneeUserId ?? null,
       startDate,
       dueDate,
+      dependsOnActivityId: d.dependsOnActivityId ?? null,
+      ...(setActualStart ? { actualStartDate: utcTodayStart() } : {}),
       status: effectiveStatus,
-      impactsProgress: normalized.impactsProgress,
-      contributionWeight: new Prisma.Decimal(String(d.contributionWeight)),
+      impactsProgress: finalImpacts,
+      contributionWeight: weightOutcome.decimal,
       progressContribution:
         normalized.progress == null ? null : new Prisma.Decimal(normalized.progress.toFixed(2)),
     },
@@ -282,15 +440,31 @@ export async function updateActivity(activityId: string, input: unknown): Promis
 
   const kr = await prisma.keyResult.findUnique({
     where: { id: existing.keyResultId },
-    select: { companyId: true },
+    select: {
+      companyId: true,
+      areaId: true,
+      allowActivityImpact: true,
+      progressMode: true,
+      strategicObjective: { select: { areaId: true } },
+    },
   });
   if (!kr) {
     return { ok: false, message: "Resultado clave no encontrado." };
   }
 
-  const assignee = await assertAssigneeInCompany(parsed.data.assigneeUserId, kr.companyId);
+  const restrictedAreaId = kr.areaId ?? kr.strategicObjective.areaId ?? null;
+  const assignee = await assertAssigneeAllowed(
+    parsed.data.assigneeUserId,
+    kr.companyId,
+    restrictedAreaId
+  );
   if (parsed.data.assigneeUserId && !assignee) {
-    return { ok: false, message: "El responsable debe ser un usuario activo de la misma empresa." };
+    return {
+      ok: false,
+      message: restrictedAreaId
+        ? "El responsable tiene que ser una persona activa que pertenezca al equipo del área de este resultado clave."
+        : "El responsable debe ser un usuario activo de la misma empresa.",
+    };
   }
 
   const prev = await prisma.activity.findUnique({
@@ -299,6 +473,7 @@ export async function updateActivity(activityId: string, input: unknown): Promis
       status: true,
       progressContribution: true,
       impactsProgress: true,
+      actualStartDate: true,
     },
   });
 
@@ -321,6 +496,53 @@ export async function updateActivity(activityId: string, input: unknown): Promis
     previousImpactsProgress: prevImpacts,
   });
 
+  const finalImpacts = kr.allowActivityImpact ? normalized.impactsProgress : false;
+
+  const weightOutcome = resolvePersistedContributionWeight({
+    raw: d.contributionWeight,
+    impactsProgress: finalImpacts,
+    allowActivityImpact: kr.allowActivityImpact,
+    progressMode: kr.progressMode,
+  });
+  if (weightOutcome.fieldError) {
+    return {
+      ok: false,
+      message: "Revisá el peso de impacto.",
+      fieldErrors: { contributionWeight: [weightOutcome.fieldError] },
+    };
+  }
+
+  const depRes = await validateDependsOnInput({
+    companyId: kr.companyId,
+    editingActivityId: activityId,
+    dependsOnActivityId: d.dependsOnActivityId,
+  });
+  if (!depRes.ok) {
+    return {
+      ok: false,
+      message: depRes.message,
+      fieldErrors: depRes.fieldErrors,
+    };
+  }
+
+  const depGate = assertCanStartOrProgress({
+    dependsOnActivityId: d.dependsOnActivityId ?? null,
+    predecessorStatus: depRes.predecessorStatus,
+    effectiveStatus,
+    progressPercent: normalized.progress,
+  });
+  if (!depGate.ok) {
+    return { ok: false, message: depGate.message };
+  }
+
+  const setActualStart = shouldSetActualStartDate({
+    previousActualStart: prev?.actualStartDate ?? null,
+    dependsOnActivityId: d.dependsOnActivityId ?? null,
+    predecessorStatus: depRes.predecessorStatus,
+    effectiveStatus,
+    progressPercent: normalized.progress,
+  });
+
   await prisma.activity.update({
     where: { id: activityId },
     data: {
@@ -329,9 +551,11 @@ export async function updateActivity(activityId: string, input: unknown): Promis
       assigneeUserId: d.assigneeUserId ?? null,
       startDate,
       dueDate,
+      dependsOnActivityId: d.dependsOnActivityId ?? null,
+      ...(setActualStart ? { actualStartDate: utcTodayStart() } : {}),
       status: effectiveStatus,
-      impactsProgress: normalized.impactsProgress,
-      contributionWeight: new Prisma.Decimal(String(d.contributionWeight)),
+      impactsProgress: finalImpacts,
+      contributionWeight: weightOutcome.decimal,
       progressContribution:
         normalized.progress == null ? null : new Prisma.Decimal(normalized.progress.toFixed(2)),
     },
@@ -378,6 +602,11 @@ export async function updateActivityProgressSnapshot(
       status: true,
       progressContribution: true,
       impactsProgress: true,
+      contributionWeight: true,
+      dependsOnActivityId: true,
+      actualStartDate: true,
+      keyResult: { select: { allowActivityImpact: true } },
+      dependsOnActivity: { select: { status: true } },
     },
   });
   if (!existing) {
@@ -408,10 +637,40 @@ export async function updateActivityProgressSnapshot(
     previousImpactsProgress: existing.impactsProgress,
   });
 
+  const predStatus = existing.dependsOnActivityId
+    ? (existing.dependsOnActivity?.status ?? null)
+    : null;
+  const depGate = assertCanStartOrProgress({
+    dependsOnActivityId: existing.dependsOnActivityId,
+    predecessorStatus: predStatus,
+    effectiveStatus,
+    progressPercent: normalized.progress,
+  });
+  if (!depGate.ok) {
+    return { ok: false, message: depGate.message };
+  }
+
+  const finalImpacts = existing.keyResult.allowActivityImpact ? normalized.impactsProgress : false;
+  const prevW = Number(existing.contributionWeight);
+
   const noStatusChange = existing.status === effectiveStatus;
   const noProgressChange = prevP === normalized.progress;
-  const noImpactChange = existing.impactsProgress === normalized.impactsProgress;
-  if (noStatusChange && noProgressChange && noImpactChange) {
+  const noImpactChange = existing.impactsProgress === finalImpacts;
+  const needsWeightZero = !finalImpacts && prevW !== 0;
+  const setActualStart = shouldSetActualStartDate({
+    previousActualStart: existing.actualStartDate,
+    dependsOnActivityId: existing.dependsOnActivityId,
+    predecessorStatus: predStatus,
+    effectiveStatus,
+    progressPercent: normalized.progress,
+  });
+  if (
+    noStatusChange &&
+    noProgressChange &&
+    noImpactChange &&
+    !needsWeightZero &&
+    !setActualStart
+  ) {
     return { ok: false, message: "No hay cambios para guardar" };
   }
 
@@ -419,7 +678,9 @@ export async function updateActivityProgressSnapshot(
     where: { id: activityId },
     data: {
       status: effectiveStatus,
-      impactsProgress: normalized.impactsProgress,
+      impactsProgress: finalImpacts,
+      ...(finalImpacts ? {} : { contributionWeight: new Prisma.Decimal(0) }),
+      ...(setActualStart ? { actualStartDate: utcTodayStart() } : {}),
       progressContribution:
         normalized.progress == null ? null : new Prisma.Decimal(normalized.progress.toFixed(2)),
     },
@@ -476,6 +737,11 @@ export async function setActivityStatus(
       status: true,
       progressContribution: true,
       impactsProgress: true,
+      contributionWeight: true,
+      dependsOnActivityId: true,
+      actualStartDate: true,
+      keyResult: { select: { allowActivityImpact: true } },
+      dependsOnActivity: { select: { status: true } },
     },
   });
   if (!row) {
@@ -495,11 +761,34 @@ export async function setActivityStatus(
     previousImpactsProgress: row.impactsProgress,
   });
 
+  const predStatus = row.dependsOnActivityId ? (row.dependsOnActivity?.status ?? null) : null;
+  const depGate = assertCanStartOrProgress({
+    dependsOnActivityId: row.dependsOnActivityId,
+    predecessorStatus: predStatus,
+    effectiveStatus: status,
+    progressPercent: normalized.progress,
+  });
+  if (!depGate.ok) {
+    return { ok: false, message: depGate.message };
+  }
+
+  const finalImpacts = row.keyResult.allowActivityImpact ? normalized.impactsProgress : false;
+
+  const setActualStart = shouldSetActualStartDate({
+    previousActualStart: row.actualStartDate,
+    dependsOnActivityId: row.dependsOnActivityId,
+    predecessorStatus: predStatus,
+    effectiveStatus: status,
+    progressPercent: normalized.progress,
+  });
+
   await prisma.activity.update({
     where: { id: activityId },
     data: {
       status,
-      impactsProgress: normalized.impactsProgress,
+      impactsProgress: finalImpacts,
+      ...(finalImpacts ? {} : { contributionWeight: new Prisma.Decimal(0) }),
+      ...(setActualStart ? { actualStartDate: utcTodayStart() } : {}),
       progressContribution:
         normalized.progress == null ? null : new Prisma.Decimal(normalized.progress.toFixed(2)),
     },

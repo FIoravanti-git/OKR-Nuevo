@@ -11,6 +11,7 @@ import {
   institutionalObjectiveOptionsWhere,
   strategicObjectiveListWhere,
 } from "@/lib/strategic-objectives/policy";
+import { formatResponsablesFromAreaMemberLinks } from "@/lib/areas/responsables-display";
 import { prisma } from "@/lib/prisma";
 import type {
   InstitutionalObjectiveFilterOption,
@@ -40,6 +41,16 @@ export default async function ObjetivosClavePage({ searchParams }: PageProps) {
       where,
       include: {
         company: { select: { name: true } },
+        area: {
+          select: {
+            id: true,
+            name: true,
+            memberLinks: {
+              where: { esResponsable: true, user: { isActive: true } },
+              select: { user: { select: { name: true } } },
+            },
+          },
+        },
         institutionalObjective: {
           select: {
             id: true,
@@ -90,6 +101,9 @@ export default async function ObjetivosClavePage({ searchParams }: PageProps) {
     institutionalProjectId: s.institutionalObjective.institutionalProjectId,
     projectTitle: s.institutionalObjective.institutionalProject.title,
     keyResultCount: s._count.keyResults,
+    areaId: s.areaId,
+    areaName: s.area?.name ?? null,
+    areaResponsablesLabel: formatResponsablesFromAreaMemberLinks(s.area?.memberLinks),
     createdAt: s.createdAt.toISOString(),
   }));
 

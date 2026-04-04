@@ -5,6 +5,7 @@ import { KeyResultForm } from "@/components/key-results/key-result-form";
 import { PageHeading } from "@/components/layout/page-heading";
 import { Button } from "@/components/ui/button";
 import { requireSessionUser } from "@/lib/auth/session-user";
+import { formatResponsablesFromAreaMemberLinks } from "@/lib/areas/responsables-display";
 import { canMutateKeyResult, canMutateKeyResults, canViewKeyResult } from "@/lib/key-results/policy";
 import { prisma } from "@/lib/prisma";
 
@@ -28,6 +29,17 @@ export default async function EditResultadoClavePage({ params }: PageProps) {
       strategicObjective: {
         select: {
           title: true,
+          areaId: true,
+          area: {
+            select: {
+              id: true,
+              name: true,
+              memberLinks: {
+                where: { esResponsable: true, user: { isActive: true } },
+                select: { user: { select: { name: true } } },
+              },
+            },
+          },
           institutionalObjective: {
             select: {
               title: true,
@@ -59,6 +71,10 @@ export default async function EditResultadoClavePage({ params }: PageProps) {
       projectTitle: io.institutionalProject.title,
       institutionalObjectiveTitle: io.title,
       companyName: io.company.name,
+      companyId: row.companyId,
+      areaId: so.areaId,
+      areaName: so.area?.name ?? null,
+      areaResponsablesLabel: formatResponsablesFromAreaMemberLinks(so.area?.memberLinks),
     },
   ];
 
@@ -83,7 +99,7 @@ export default async function EditResultadoClavePage({ params }: PageProps) {
         </Button>
         <PageHeading
           title={`Editar · ${row.title}`}
-          description="El objetivo clave padre no se puede cambiar. El progreso en modos automático e híbrido se recalcula al guardar."
+          description="El objetivo clave padre no se puede cambiar. El área del resultado sigue al objetivo clave."
         />
       </div>
       <KeyResultForm

@@ -5,6 +5,8 @@ export type InstitutionalObjectiveAdminRow = {
   title: string;
   description: string | null;
   weight: string;
+  /** Si false, no suma al avance general del proyecto. */
+  includedInGeneralProgress: boolean;
   progressCached: number | null;
   status: InstitutionalObjectiveStatus;
   sortOrder: number;

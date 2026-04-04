@@ -18,6 +18,8 @@ export const institutionalObjectiveFormSchema = z.object({
   ),
   institutionalProjectId: z.string().min(1, "Seleccioná un proyecto institucional"),
   status: z.enum(["DRAFT", "ACTIVE", "COMPLETED", "CANCELLED"]),
+  /** Si false, el objetivo no entra en el consolidado del proyecto (sí mantiene avance interno). */
+  includedInGeneralProgress: z.boolean(),
 });
 
 export const institutionalObjectiveStatusSchema = z.enum([

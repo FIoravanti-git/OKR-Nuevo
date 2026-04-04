@@ -15,6 +15,10 @@ export type StrategicObjectiveAdminRow = {
   institutionalProjectId: string;
   projectTitle: string;
   keyResultCount: number;
+  areaId: string | null;
+  areaName: string | null;
+  /** Responsables del área (texto para tabla). */
+  areaResponsablesLabel: string;
   createdAt: string;
 };
 

@@ -65,7 +65,7 @@ export async function createKeyResult(input: unknown): Promise<KeyResultActionRe
 
   const parent = await prisma.strategicObjective.findUnique({
     where: { id: parsed.data.strategicObjectiveId },
-    select: { companyId: true, institutionalObjectiveId: true },
+    select: { companyId: true, institutionalObjectiveId: true, areaId: true },
   });
 
   if (!parent) {
@@ -74,6 +74,13 @@ export async function createKeyResult(input: unknown): Promise<KeyResultActionRe
 
   if (!canMutateKeyResult(actor, parent.companyId)) {
     return { ok: false, message: "No podés crear resultados clave para ese objetivo." };
+  }
+
+  if (!parent.areaId) {
+    return {
+      ok: false,
+      message: "El objetivo clave debe tener un área asignada. Asignala en Objetivos clave y volvé a intentar.",
+    };
   }
 
   const d = parsed.data;
@@ -102,6 +109,7 @@ export async function createKeyResult(input: unknown): Promise<KeyResultActionRe
       progressMode: d.progressMode,
       allowActivityImpact: d.allowActivityImpact,
       progressCached,
+      areaId: parent.areaId,
     },
   });
 
@@ -125,7 +133,7 @@ export async function updateKeyResult(krId: string, input: unknown): Promise<Key
   const existing = await prisma.keyResult.findUnique({
     where: { id: krId },
     include: {
-      strategicObjective: { select: { institutionalObjectiveId: true } },
+      strategicObjective: { select: { institutionalObjectiveId: true, areaId: true } },
     },
   });
 
@@ -155,6 +163,15 @@ export async function updateKeyResult(krId: string, input: unknown): Promise<Key
   }
 
   const d = parsed.data;
+
+  const soAreaId = existing.strategicObjective.areaId;
+  if (!soAreaId) {
+    return {
+      ok: false,
+      message: "El objetivo clave padre debe tener un área asignada. Corregilo en Objetivos clave.",
+    };
+  }
+
   const ioId = existing.strategicObjective.institutionalObjectiveId;
 
   const beforeSnap = {
@@ -186,6 +203,7 @@ export async function updateKeyResult(krId: string, input: unknown): Promise<Key
       calculationMode: d.calculationMode,
       progressMode: d.progressMode,
       allowActivityImpact: d.allowActivityImpact,
+      areaId: soAreaId,
       ...(progressUpdate !== undefined ? { progressCached: progressUpdate } : {}),
     },
   });

@@ -6,6 +6,7 @@ import {
   canMutateStrategicObjectives,
   institutionalObjectiveOptionsWhere,
 } from "@/lib/strategic-objectives/policy";
+import { areaListWhere } from "@/lib/areas/policy";
 import { prisma } from "@/lib/prisma";
 
 export default async function NuevoObjetivoClavePage() {
@@ -23,20 +24,34 @@ export default async function NuevoObjetivoClavePage() {
     redirect("/dashboard");
   }
 
-  const objectivesRaw = await prisma.institutionalObjective.findMany({
-    where: institutionalObjectiveOptionsWhere(session),
-    include: {
-      institutionalProject: { select: { title: true } },
-      company: { select: { name: true } },
-    },
-    orderBy: [{ institutionalProject: { title: "asc" } }, { sortOrder: "asc" }, { title: "asc" }],
-  });
+  const [objectivesRaw, areasRaw] = await Promise.all([
+    prisma.institutionalObjective.findMany({
+      where: institutionalObjectiveOptionsWhere(session),
+      include: {
+        institutionalProject: { select: { title: true } },
+        company: { select: { name: true } },
+      },
+      orderBy: [{ institutionalProject: { title: "asc" } }, { sortOrder: "asc" }, { title: "asc" }],
+    }),
+    prisma.area.findMany({
+      where: areaListWhere(session),
+      select: { id: true, name: true, companyId: true },
+      orderBy: { name: "asc" },
+    }),
+  ]);
 
   const institutionalObjectives = objectivesRaw.map((o) => ({
     id: o.id,
     title: o.title,
     projectTitle: o.institutionalProject.title,
     companyName: o.company.name,
+    companyId: o.companyId,
+  }));
+
+  const areaOptions = areasRaw.map((a) => ({
+    id: a.id,
+    name: a.name,
+    companyId: a.companyId,
   }));
 
   return (
@@ -54,6 +69,7 @@ export default async function NuevoObjetivoClavePage() {
           mode="create"
           viewerRole={session.role}
           institutionalObjectives={institutionalObjectives}
+          areaOptions={areaOptions}
           defaultValues={{
             title: "",
             description: "",
@@ -61,6 +77,7 @@ export default async function NuevoObjetivoClavePage() {
             sortOrder: "0",
             institutionalObjectiveId: "",
             status: "DRAFT",
+            areaId: "",
           }}
           cancelHref="/objetivos-clave"
         />

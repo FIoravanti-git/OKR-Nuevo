@@ -8,6 +8,7 @@ import { revalidateOkrHierarchyPaths } from "@/lib/okr/revalidate-okr-paths";
 import { syncInstitutionalObjectiveProgressFromStrategicChildren } from "@/lib/okr/sync-institutional-objective-progress";
 import { syncKeyResultProgress } from "@/lib/okr/sync-key-result-progress";
 import { syncStrategicObjectiveProgressFromKeyResults } from "@/lib/okr/sync-strategic-objective-progress";
+import { isAreaInCompany } from "@/lib/areas/validate-area-company";
 import {
   canMutateStrategicObjective,
   canMutateStrategicObjectives,
@@ -51,7 +52,16 @@ export async function createStrategicObjective(input: unknown): Promise<Strategi
     return { ok: false, message: "No podés crear objetivos clave para ese objetivo institucional." };
   }
 
-  const { title, description, weight, sortOrder, institutionalObjectiveId, status } = parsed.data;
+  const { title, description, weight, sortOrder, institutionalObjectiveId, status, areaId } = parsed.data;
+
+  const okArea = await isAreaInCompany(areaId, parent.companyId);
+  if (!okArea) {
+    return {
+      ok: false,
+      message: "El área no pertenece a la empresa del objetivo institucional.",
+      fieldErrors: { areaId: ["Área no válida"] },
+    };
+  }
 
   await prisma.strategicObjective.create({
     data: {
@@ -63,6 +73,7 @@ export async function createStrategicObjective(input: unknown): Promise<Strategi
       sortOrder,
       status,
       progressCached: null,
+      areaId,
     },
   });
 
@@ -111,7 +122,16 @@ export async function updateStrategicObjective(
     return { ok: false, message: "No se puede cambiar el objetivo institucional asociado." };
   }
 
-  const { title, description, weight, sortOrder, status } = parsed.data;
+  const { title, description, weight, sortOrder, status, areaId } = parsed.data;
+
+  const okArea = await isAreaInCompany(areaId, existing.companyId);
+  if (!okArea) {
+    return {
+      ok: false,
+      message: "El área no pertenece a esta empresa.",
+      fieldErrors: { areaId: ["Área no válida"] },
+    };
+  }
 
   await prisma.strategicObjective.update({
     where: { id: strategicId },
@@ -121,7 +141,13 @@ export async function updateStrategicObjective(
       weight: new Prisma.Decimal(String(weight)),
       sortOrder,
       status,
+      areaId,
     },
+  });
+
+  await prisma.keyResult.updateMany({
+    where: { strategicObjectiveId: strategicId },
+    data: { areaId },
   });
 
   await syncStrategicObjectiveProgressFromKeyResults(strategicId);

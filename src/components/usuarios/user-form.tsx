@@ -18,12 +18,15 @@ import { cn } from "@/lib/utils";
 
 type CompanyOption = { id: string; name: string };
 
+export type UserAreaOption = { id: string; name: string; companyId: string };
+
 export type UserFormFields = {
   name: string;
   email: string;
   password: string;
   role: UserRole;
   companyId: string;
+  areaId: string;
   isActive: boolean;
 };
 
@@ -34,6 +37,7 @@ type UserFormProps = {
   viewerRole: UserRole;
   viewerCompanyId: string | null;
   companies: CompanyOption[];
+  areas: UserAreaOption[];
   allowedRoles: UserRole[];
   defaultValues: UserFormFields;
   cancelHref: string;
@@ -46,6 +50,7 @@ export function UserForm({
   viewerRole,
   viewerCompanyId,
   companies,
+  areas,
   allowedRoles,
   defaultValues,
   cancelHref,
@@ -68,11 +73,24 @@ export function UserForm({
   });
 
   const role = watch("role");
+  const companyIdWatch = watch("companyId");
   const lockActiveToggle = mode === "edit" && userId === sessionUserId;
+
+  const effectiveCompanyIdForArea =
+    viewerRole === "ADMIN_EMPRESA" ? viewerCompanyId ?? "" : role === "SUPER_ADMIN" ? "" : companyIdWatch ?? "";
+
+  const filteredUserAreas = useMemo(
+    () =>
+      effectiveCompanyIdForArea
+        ? areas.filter((a) => a.companyId === effectiveCompanyIdForArea)
+        : [],
+    [areas, effectiveCompanyIdForArea]
+  );
 
   useEffect(() => {
     if (role === "SUPER_ADMIN") {
       setValue("companyId", "");
+      setValue("areaId", "");
     }
   }, [role, setValue]);
 
@@ -215,6 +233,26 @@ export function UserForm({
             <p className="text-sm text-muted-foreground sm:col-span-2">
               Los super administradores de plataforma no requieren empresa asignada.
             </p>
+          ) : null}
+
+          {role !== "SUPER_ADMIN" && effectiveCompanyIdForArea ? (
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="user-area">Área (opcional)</Label>
+              <select
+                id="user-area"
+                className="flex h-8 w-full max-w-md rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+                {...register("areaId")}
+              >
+                <option value="">Sin área</option>
+                {filteredUserAreas.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
+                ))}
+              </select>
+              {errors.areaId ? <p className="text-xs text-destructive">{errors.areaId.message}</p> : null}
+              <p className="text-xs text-muted-foreground">Solo se listan áreas de la empresa del usuario.</p>
+            </div>
           ) : null}
         </CardContent>
       </Card>

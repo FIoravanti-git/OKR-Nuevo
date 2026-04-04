@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { requireSessionUser } from "@/lib/auth/session-user";
 import { prisma } from "@/lib/prisma";
 import { userListWhere } from "@/lib/users/policy";
+import { getUsersDeletableMap } from "@/lib/users/user-deletion";
 import type { UserAdminRow } from "@/types/user-admin";
 
 export default async function UsuariosPage() {
@@ -17,6 +18,11 @@ export default async function UsuariosPage() {
       where,
       include: {
         company: { select: { id: true, name: true } },
+        areaMemberships: {
+          take: 1,
+          orderBy: { createdAt: "asc" },
+          include: { area: { select: { id: true, name: true } } },
+        },
       },
       orderBy: { createdAt: "desc" },
     }),
@@ -28,6 +34,9 @@ export default async function UsuariosPage() {
       : Promise.resolve([]),
   ]);
 
+  const userIds = users.map((u) => u.id);
+  const deletableMap = await getUsersDeletableMap(userIds);
+
   const rows: UserAdminRow[] = users.map((u) => ({
     id: u.id,
     name: u.name,
@@ -35,8 +44,11 @@ export default async function UsuariosPage() {
     role: u.role,
     companyId: u.companyId,
     companyName: u.company?.name ?? null,
+    areaId: u.areaMemberships[0]?.areaId ?? null,
+    areaName: u.areaMemberships[0]?.area.name ?? null,
     isActive: u.isActive,
     createdAt: u.createdAt.toISOString(),
+    canDelete: deletableMap.get(u.id) ?? false,
   }));
 
   return (
@@ -59,6 +71,7 @@ export default async function UsuariosPage() {
         data={rows}
         viewerRole={sessionUser.role}
         viewerId={sessionUser.id}
+        viewerCanMutate
         companies={companies}
       />
     </div>

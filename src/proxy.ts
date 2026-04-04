@@ -10,7 +10,8 @@ type AppJwt = {
   companyId?: string | null;
 };
 
-export async function middleware(request: NextRequest) {
+/** Next.js 16+: sustituye a `middleware.ts` (convención `proxy`). */
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (pathname.startsWith("/api/auth")) {

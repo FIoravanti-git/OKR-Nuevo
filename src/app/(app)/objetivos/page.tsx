@@ -47,6 +47,7 @@ export default async function ObjetivosInstitucionalesPage() {
     title: o.title,
     description: o.description,
     weight: o.weight.toString(),
+    includedInGeneralProgress: o.includedInGeneralProgress,
     progressCached: o.progressCached != null ? Number(o.progressCached) : null,
     status: o.status,
     sortOrder: o.sortOrder,
