@@ -197,6 +197,7 @@ export function QuarterlyGanttSection({ data }: { data: CompanyDashboardChartsPa
   const [statusFilter, setStatusFilter] = useState<"all" | ActivityStatus>("all");
   const [assigneeFilter, setAssigneeFilter] = useState("all");
   const [groupByKr, setGroupByKr] = useState(false);
+  const [collapsedAreas, setCollapsedAreas] = useState<string[]>([]);
 
   const quarterRef = useMemo(() => {
     const [y, q] = quarterKeyState.split("-Q");
@@ -291,6 +292,16 @@ export function QuarterlyGanttSection({ data }: { data: CompanyDashboardChartsPa
           .map(([keyResultTitle, items]) => ({ keyResultTitle, items })),
       }));
   }, [filteredRows]);
+
+  const areasCollapsible = areaFilter === "all";
+  const isAreaCollapsed = (areaName: string): boolean =>
+    areasCollapsible && collapsedAreas.includes(areaName);
+  const toggleAreaCollapse = (areaName: string) => {
+    if (!areasCollapsible) return;
+    setCollapsedAreas((prev) =>
+      prev.includes(areaName) ? prev.filter((x) => x !== areaName) : [...prev, areaName]
+    );
+  };
 
   function renderActivityRow(r: (typeof filteredRows)[number]) {
     const plannedStart = parseIso(r.plannedStart);
@@ -450,24 +461,50 @@ export function QuarterlyGanttSection({ data }: { data: CompanyDashboardChartsPa
             ) : groupByKr ? (
               groupedByAreaAndKr.map((areaGroup) => (
                 <div key={areaGroup.areaName} className="border-b border-border/60">
-                  <div className="bg-background/70 px-3 py-2 text-sm font-semibold text-foreground">
-                    {areaGroup.areaName}
-                  </div>
-                  {areaGroup.keyResults.map((krGroup) => (
-                    <div key={`${areaGroup.areaName}-${krGroup.keyResultTitle}`} className="border-t border-border/40">
-                      <div className="bg-muted/15 px-3 py-1.5 text-xs font-medium text-muted-foreground">
-                        Resultado: {krGroup.keyResultTitle}
-                      </div>
-                      {krGroup.items.map((r) => renderActivityRow(r))}
-                    </div>
-                  ))}
+                  <button
+                    type="button"
+                    onClick={() => toggleAreaCollapse(areaGroup.areaName)}
+                    className="flex w-full items-center justify-between bg-background/70 px-3 py-2 text-left text-sm font-semibold text-foreground"
+                    aria-expanded={!isAreaCollapsed(areaGroup.areaName)}
+                    disabled={!areasCollapsible}
+                  >
+                    <span>{areaGroup.areaName}</span>
+                    {areasCollapsible ? (
+                      <span className="text-xs font-medium text-muted-foreground">
+                        {isAreaCollapsed(areaGroup.areaName) ? "Mostrar" : "Ocultar"}
+                      </span>
+                    ) : null}
+                  </button>
+                  {!isAreaCollapsed(areaGroup.areaName)
+                    ? areaGroup.keyResults.map((krGroup) => (
+                        <div key={`${areaGroup.areaName}-${krGroup.keyResultTitle}`} className="border-t border-border/40">
+                          <div className="bg-muted/15 px-3 py-1.5 text-xs font-medium text-muted-foreground">
+                            Resultado: {krGroup.keyResultTitle}
+                          </div>
+                          {krGroup.items.map((r) => renderActivityRow(r))}
+                        </div>
+                      ))
+                    : null}
                 </div>
               ))
             ) : (
               grouped.map(([areaName, areaRows]) => (
                 <div key={areaName} className="border-b border-border/60">
-                  <div className="bg-background/70 px-3 py-2 text-sm font-semibold text-foreground">{areaName}</div>
-                  {areaRows.map((r) => renderActivityRow(r))}
+                  <button
+                    type="button"
+                    onClick={() => toggleAreaCollapse(areaName)}
+                    className="flex w-full items-center justify-between bg-background/70 px-3 py-2 text-left text-sm font-semibold text-foreground"
+                    aria-expanded={!isAreaCollapsed(areaName)}
+                    disabled={!areasCollapsible}
+                  >
+                    <span>{areaName}</span>
+                    {areasCollapsible ? (
+                      <span className="text-xs font-medium text-muted-foreground">
+                        {isAreaCollapsed(areaName) ? "Mostrar" : "Ocultar"}
+                      </span>
+                    ) : null}
+                  </button>
+                  {!isAreaCollapsed(areaName) ? areaRows.map((r) => renderActivityRow(r)) : null}
                 </div>
               ))
             )}
