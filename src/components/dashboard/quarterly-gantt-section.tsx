@@ -464,7 +464,7 @@ export function QuarterlyGanttSection({ data }: { data: CompanyDashboardChartsPa
                   <button
                     type="button"
                     onClick={() => toggleAreaCollapse(areaGroup.areaName)}
-                    className="flex w-full items-center justify-between bg-background/70 px-3 py-2 text-left text-sm font-semibold text-foreground"
+                    className="flex w-full items-center justify-between bg-background/70 px-3 py-2 text-left text-sm font-semibold text-foreground cursor-pointer disabled:cursor-default"
                     aria-expanded={!isAreaCollapsed(areaGroup.areaName)}
                     disabled={!areasCollapsible}
                   >
@@ -493,7 +493,7 @@ export function QuarterlyGanttSection({ data }: { data: CompanyDashboardChartsPa
                   <button
                     type="button"
                     onClick={() => toggleAreaCollapse(areaName)}
-                    className="flex w-full items-center justify-between bg-background/70 px-3 py-2 text-left text-sm font-semibold text-foreground"
+                    className="flex w-full items-center justify-between bg-background/70 px-3 py-2 text-left text-sm font-semibold text-foreground cursor-pointer disabled:cursor-default"
                     aria-expanded={!isAreaCollapsed(areaName)}
                     disabled={!areasCollapsible}
                   >
