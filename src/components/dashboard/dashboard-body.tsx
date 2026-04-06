@@ -17,6 +17,7 @@ import type { CompanyDashboardChartsPayload, PlatformDashboardChartsPayload } fr
 import type { CompanyExecutiveDashboard } from "@/lib/dashboard/executive";
 import type { DashboardStats } from "@/lib/dashboard/stats";
 import { roleLabel } from "@/lib/format";
+import { AreaPerformanceSection } from "./area-performance-section";
 import { CompanyDashboardCharts, DashboardKeyResultsRankingCard } from "./company-dashboard-charts";
 import { PlatformDashboardCharts } from "./platform-dashboard-charts";
 import { MetricCard } from "./metric-card";
@@ -284,6 +285,7 @@ export function DashboardBody({
             <DashboardKeyResultsRankingCard data={companyCharts} />
           </div>
         </section>
+        <AreaPerformanceSection data={companyCharts} />
       </div>
     );
   }
@@ -359,6 +361,7 @@ export function DashboardBody({
               description="Los mismos indicadores de seguimiento que ve el administrador, para contexto compartido de la organización."
             />
           </section>
+          <AreaPerformanceSection data={companyCharts} />
         </>
       )}
     </div>

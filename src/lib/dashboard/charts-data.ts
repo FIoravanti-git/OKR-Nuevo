@@ -36,11 +36,31 @@ export type CompanyDashboardChartsPayload = {
   activitiesByStatus: { status: ActivityStatus; label: string; count: number }[];
   keyResultsHighest: DashboardChartsKrEntry[];
   keyResultsLowest: DashboardChartsKrEntry[];
+  areaPerformance: {
+    areas: {
+      areaId: string;
+      areaName: string;
+      progressPercent: number;
+      totalWeight: number;
+      activitiesCount: number;
+      contributionPercent: number;
+      status: "ON_TRACK" | "AT_RISK" | "LATE";
+      blockedActivities: number;
+      overdueActivities: number;
+    }[];
+    totalWeight: number;
+    atRiskAreas: number;
+    highestImpactAreaIds: string[];
+  };
 };
 
 export type PlatformDashboardChartsPayload = {
   activitiesByStatus: { status: ActivityStatus; label: string; count: number }[];
 };
+
+function round1(n: number): number {
+  return Math.round(n * 10) / 10;
+}
 
 /**
  * Datos para gráficos del tenant. Reutiliza progreso de proyectos ya calculado en `executive`.
@@ -49,6 +69,18 @@ export async function getCompanyDashboardCharts(
   companyId: string,
   executive: CompanyExecutiveDashboard
 ): Promise<CompanyDashboardChartsPayload> {
+  const now = new Date();
+  const directAreaKrWhere = {
+    progressCached: { not: null },
+    strategicObjective: { institutionalObjective: { includedInGeneralProgress: true } },
+  } as const;
+
+  const strategicAreaKrWhere = {
+    areaId: null,
+    progressCached: { not: null },
+    strategicObjective: { institutionalObjective: { includedInGeneralProgress: true } },
+  } as const;
+
   const krSelect = {
     id: true,
     title: true,
@@ -56,7 +88,7 @@ export async function getCompanyDashboardCharts(
     strategicObjective: { select: { title: true } },
   } as const;
 
-  const [objectives, statusGroups, krHigh, krLow] = await Promise.all([
+  const [objectives, statusGroups, krHigh, krLow, areas] = await Promise.all([
     prisma.institutionalObjective.findMany({
       where: { companyId, progressCached: { not: null }, includedInGeneralProgress: true },
       orderBy: { title: "asc" },
@@ -88,6 +120,40 @@ export async function getCompanyDashboardCharts(
       take: 6,
       select: krSelect,
     }),
+    prisma.area.findMany({
+      where: { companyId, status: "ACTIVE" },
+      orderBy: { name: "asc" },
+      select: {
+        id: true,
+        name: true,
+        keyResults: {
+          where: directAreaKrWhere,
+          select: {
+            id: true,
+            weight: true,
+            progressCached: true,
+            activities: {
+              select: { status: true, dueDate: true },
+            },
+          },
+        },
+        strategicObjectives: {
+          select: {
+            keyResults: {
+              where: strategicAreaKrWhere,
+              select: {
+                id: true,
+                weight: true,
+                progressCached: true,
+                activities: {
+                  select: { status: true, dueDate: true },
+                },
+              },
+            },
+          },
+        },
+      },
+    }),
   ]);
 
   const countByStatus = new Map<ActivityStatus, number>();
@@ -109,6 +175,84 @@ export async function getCompanyDashboardCharts(
     progressPercent: Math.round(Number(k.progressCached) * 100) / 100,
   });
 
+  const areaRows = areas.map((area) => {
+    const krMap = new Map<
+      string,
+      {
+        weight: number;
+        progress: number;
+        activities: { status: ActivityStatus; dueDate: Date | null }[];
+      }
+    >();
+
+    for (const kr of area.keyResults) {
+      krMap.set(kr.id, {
+        weight: Number(kr.weight),
+        progress: Number(kr.progressCached),
+        activities: kr.activities,
+      });
+    }
+    for (const so of area.strategicObjectives) {
+      for (const kr of so.keyResults) {
+        if (!krMap.has(kr.id)) {
+          krMap.set(kr.id, {
+            weight: Number(kr.weight),
+            progress: Number(kr.progressCached),
+            activities: kr.activities,
+          });
+        }
+      }
+    }
+
+    const krs = [...krMap.values()];
+    const totalWeight = krs.reduce((sum, kr) => sum + Math.max(0, kr.weight), 0);
+    const weightedProgressSum = krs.reduce((sum, kr) => sum + Math.max(0, kr.weight) * kr.progress, 0);
+    const progressPercent = totalWeight > 0 ? weightedProgressSum / totalWeight : 0;
+    const allActivities = krs.flatMap((kr) => kr.activities);
+    const blockedActivities = allActivities.filter((a) => a.status === "BLOCKED").length;
+    const overdueActivities = allActivities.filter(
+      (a) => a.dueDate && a.dueDate.getTime() < now.getTime() && a.status !== "DONE" && a.status !== "CANCELLED"
+    ).length;
+
+    let status: "ON_TRACK" | "AT_RISK" | "LATE" = "ON_TRACK";
+    if (overdueActivities > 0) {
+      status = "LATE";
+    } else if (blockedActivities > 0 || progressPercent < 55) {
+      status = "AT_RISK";
+    }
+
+    return {
+      areaId: area.id,
+      areaName: area.name,
+      progressPercent: round1(progressPercent),
+      totalWeight,
+      weightedProgressSum,
+      activitiesCount: allActivities.length,
+      blockedActivities,
+      overdueActivities,
+      status,
+    };
+  });
+
+  const totalProgressMass = areaRows.reduce((sum, area) => sum + area.weightedProgressSum, 0);
+  const normalizedAreas = areaRows
+    .filter((area) => area.totalWeight > 0 || area.activitiesCount > 0)
+    .map((area) => ({
+      areaId: area.areaId,
+      areaName: area.areaName,
+      progressPercent: area.progressPercent,
+      totalWeight: round1(area.totalWeight),
+      activitiesCount: area.activitiesCount,
+      contributionPercent: round1(totalProgressMass > 0 ? (area.weightedProgressSum / totalProgressMass) * 100 : 0),
+      status: area.status,
+      blockedActivities: area.blockedActivities,
+      overdueActivities: area.overdueActivities,
+    }))
+    .sort((a, b) => b.contributionPercent - a.contributionPercent);
+
+  const highestImpactAreaIds = normalizedAreas.slice(0, 3).map((area) => area.areaId);
+  const atRiskAreas = normalizedAreas.filter((area) => area.status !== "ON_TRACK").length;
+
   return {
     portfolioProgressPercent: executive.portfolioProgressPercent,
     projects: executive.projects.map((p) => ({
@@ -126,6 +270,12 @@ export async function getCompanyDashboardCharts(
     activitiesByStatus,
     keyResultsHighest: krHigh.map(mapKr),
     keyResultsLowest: krLow.map(mapKr),
+    areaPerformance: {
+      areas: normalizedAreas,
+      totalWeight: round1(normalizedAreas.reduce((sum, area) => sum + area.totalWeight, 0)),
+      atRiskAreas,
+      highestImpactAreaIds,
+    },
   };
 }
 

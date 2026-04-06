@@ -14,6 +14,16 @@ type AppJwt = {
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  /** PWA: el SW y el manifiesto deben servirse sin sesión (instalación / actualizaciones). */
+  if (
+    pathname === "/manifest.json" ||
+    pathname === "/sw.js" ||
+    pathname.startsWith("/workbox-") ||
+    pathname.startsWith("/swe-worker-")
+  ) {
+    return NextResponse.next();
+  }
+
   if (pathname.startsWith("/api/auth")) {
     return NextResponse.next();
   }

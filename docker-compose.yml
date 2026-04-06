@@ -1,0 +1,10 @@
+services:
+  okr-stack:
+    build: .
+    container_name: okr-stack
+    restart: always
+    # Red bridge: Postgres en el host no era alcanzable (iptables/routing).
+    # Host network + Next escuchando en 127.0.0.1:3040 equivale a solo-localhost para Nginx.
+    network_mode: host
+    env_file:
+      - .env

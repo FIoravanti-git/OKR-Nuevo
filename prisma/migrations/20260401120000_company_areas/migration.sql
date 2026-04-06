@@ -1,5 +1,5 @@
 -- CreateEnum
-
+CREATE TYPE "AreaStatus" AS ENUM ('ACTIVE', 'INACTIVE');
 
 -- CreateTable
 CREATE TABLE "areas" (
