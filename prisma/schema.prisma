@@ -380,6 +380,8 @@ model Activity {
   dependentActivities  Activity[]              @relation("ActivityDependency")
   /// Primer día (UTC) en que la tarea pudo ejecutarse de hecho (dependencia cumplida y trabajo iniciado).
   actualStartDate      DateTime?               @map("actual_start_date")
+  /// Día real de cierre; se registra al pasar a Hecha y se limpia si vuelve a estado no final.
+  actualEndDate        DateTime?               @map("fecha_fin_real")
   impactsProgress      Boolean                 @default(true) @map("impacts_progress")
   /// Peso de impacto (peso_impacto) en la agregación ponderada hacia el KR; 0 si la tarea no impacta.
   contributionWeight   Decimal                 @default(1) @map("contribution_weight") @db.Decimal(12, 4)

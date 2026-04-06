@@ -192,6 +192,7 @@ export default async function EditActividadPage({ params }: PageProps) {
         dependencyOptions={dependencyOptions}
         currentActivityId={row.id}
         initialActualStartLabel={row.actualStartDate ? formatDate(row.actualStartDate) : null}
+        initialActualEndLabel={row.actualEndDate ? formatDate(row.actualEndDate) : null}
         delayedStartVsPlannedHint={delayedStartVsPlannedHint}
         defaultValues={{
           title: row.title,

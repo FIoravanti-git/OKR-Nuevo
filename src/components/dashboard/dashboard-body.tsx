@@ -20,6 +20,7 @@ import { roleLabel } from "@/lib/format";
 import { AreaPerformanceSection } from "./area-performance-section";
 import { CompanyDashboardCharts, DashboardKeyResultsRankingCard } from "./company-dashboard-charts";
 import { PlatformDashboardCharts } from "./platform-dashboard-charts";
+import { QuarterlyGanttSection } from "./quarterly-gantt-section";
 import { MetricCard } from "./metric-card";
 import { OperatorRecentProgress } from "./operator-recent-progress";
 
@@ -286,6 +287,7 @@ export function DashboardBody({
           </div>
         </section>
         <AreaPerformanceSection data={companyCharts} />
+        <QuarterlyGanttSection data={companyCharts} />
       </div>
     );
   }
@@ -362,6 +364,7 @@ export function DashboardBody({
             />
           </section>
           <AreaPerformanceSection data={companyCharts} />
+          <QuarterlyGanttSection data={companyCharts} />
         </>
       )}
     </div>

@@ -55,6 +55,8 @@ type ActivityFormProps = {
   currentActivityId?: string;
   /** Texto ya formateado del inicio real, si existe (edición). */
   initialActualStartLabel?: string | null;
+  /** Texto ya formateado del fin real, si existe (edición). */
+  initialActualEndLabel?: string | null;
   /** Calculado en servidor: inicio real posterior al inicio planificado. */
   delayedStartVsPlannedHint?: boolean;
   defaultValues: ActivityFormFields;
@@ -70,6 +72,7 @@ export function ActivityForm({
   dependencyOptions,
   currentActivityId,
   initialActualStartLabel,
+  initialActualEndLabel,
   delayedStartVsPlannedHint,
   defaultValues,
   cancelHref,
@@ -411,6 +414,12 @@ export function ActivityForm({
             <div>
               <p className="text-xs text-muted-foreground">Inicio real (registrado al poder ejecutar)</p>
               <p className="font-medium tabular-nums">{initialActualStartLabel}</p>
+            </div>
+          ) : null}
+          {initialActualEndLabel ? (
+            <div>
+              <p className="text-xs text-muted-foreground">Fin real</p>
+              <p className="font-medium tabular-nums">{initialActualEndLabel}</p>
             </div>
           ) : null}
           {startAtRisk ? (

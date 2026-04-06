@@ -52,6 +52,22 @@ export type CompanyDashboardChartsPayload = {
     atRiskAreas: number;
     highestImpactAreaIds: string[];
   };
+  quarterlyGantt: {
+    activities: {
+      id: string;
+      title: string;
+      areaName: string;
+      keyResultTitle: string;
+      projectTitle: string;
+      assigneeName: string | null;
+      status: ActivityStatus;
+      progressPercent: number | null;
+      plannedStart: string | null;
+      plannedEnd: string | null;
+      actualStart: string | null;
+      actualEnd: string | null;
+    }[];
+  };
 };
 
 export type PlatformDashboardChartsPayload = {
@@ -88,7 +104,7 @@ export async function getCompanyDashboardCharts(
     strategicObjective: { select: { title: true } },
   } as const;
 
-  const [objectives, statusGroups, krHigh, krLow, areas] = await Promise.all([
+  const [objectives, statusGroups, krHigh, krLow, areas, ganttActivities] = await Promise.all([
     prisma.institutionalObjective.findMany({
       where: { companyId, progressCached: { not: null }, includedInGeneralProgress: true },
       orderBy: { title: "asc" },
@@ -153,6 +169,41 @@ export async function getCompanyDashboardCharts(
           },
         },
       },
+    }),
+    prisma.activity.findMany({
+      where: {
+        companyId,
+        keyResult: { strategicObjective: { institutionalObjective: { includedInGeneralProgress: true } } },
+      },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        progressContribution: true,
+        startDate: true,
+        dueDate: true,
+        actualStartDate: true,
+        actualEndDate: true,
+        assignee: { select: { name: true } },
+        keyResult: {
+          select: {
+            title: true,
+            area: { select: { name: true } },
+            strategicObjective: {
+              select: {
+                area: { select: { name: true } },
+                institutionalObjective: {
+                  select: {
+                    institutionalProject: { select: { title: true } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      orderBy: [{ createdAt: "desc" }],
+      take: 1200,
     }),
   ]);
 
@@ -275,6 +326,22 @@ export async function getCompanyDashboardCharts(
       totalWeight: round1(normalizedAreas.reduce((sum, area) => sum + area.totalWeight, 0)),
       atRiskAreas,
       highestImpactAreaIds,
+    },
+    quarterlyGantt: {
+      activities: ganttActivities.map((a) => ({
+        id: a.id,
+        title: a.title,
+        areaName: a.keyResult.area?.name ?? a.keyResult.strategicObjective.area?.name ?? "Sin área",
+        keyResultTitle: a.keyResult.title,
+        projectTitle: a.keyResult.strategicObjective.institutionalObjective.institutionalProject.title,
+        assigneeName: a.assignee?.name ?? null,
+        status: a.status,
+        progressPercent: a.progressContribution != null ? Number(a.progressContribution) : null,
+        plannedStart: a.startDate ? a.startDate.toISOString() : null,
+        plannedEnd: a.dueDate ? a.dueDate.toISOString() : null,
+        actualStart: a.actualStartDate ? a.actualStartDate.toISOString() : null,
+        actualEnd: a.actualEndDate ? a.actualEndDate.toISOString() : null,
+      })),
     },
   };
 }

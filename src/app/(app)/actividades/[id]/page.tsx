@@ -165,6 +165,11 @@ export default async function ActividadDetailPage({ params }: PageProps) {
                 Inicio real {formatDate(row.actualStartDate)}
               </Badge>
             ) : null}
+            {row.actualEndDate ? (
+              <Badge variant="outline" className="font-normal text-xs tabular-nums">
+                Fin real {formatDate(row.actualEndDate)}
+              </Badge>
+            ) : null}
             {delayedStartVsPlanned ? (
               <Badge variant="outline" className="font-normal text-xs text-amber-950 dark:text-amber-100">
                 Atrasada por dependencia / calendario
@@ -265,6 +270,10 @@ export default async function ActividadDetailPage({ params }: PageProps) {
               <div>
                 <p className="text-muted-foreground">Inicio real</p>
                 <p className="font-medium">{row.actualStartDate ? formatDate(row.actualStartDate) : "—"}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Fin real</p>
+                <p className="font-medium">{row.actualEndDate ? formatDate(row.actualEndDate) : "—"}</p>
               </div>
             </div>
             <Separator />

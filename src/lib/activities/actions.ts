@@ -136,6 +136,23 @@ function normalizeActivityStatusBehavior(params: {
   return { progress: 0, impactsProgress: false };
 }
 
+function resolveActualEndDateBehavior(params: {
+  previousActualEndDate: Date | null;
+  effectiveStatus: ActivityStatus;
+}): { actualEndDate: Date | null } | null {
+  const { previousActualEndDate, effectiveStatus } = params;
+
+  if (effectiveStatus === "DONE") {
+    if (!previousActualEndDate) return { actualEndDate: utcTodayStart() };
+    return null;
+  }
+
+  // Más seguro para comparaciones planificado vs ejecutado:
+  // si la actividad deja de estar "Hecha", se limpia el fin real.
+  if (previousActualEndDate) return { actualEndDate: null };
+  return null;
+}
+
 async function revalidateActivityScope(keyResultId: string, activityId?: string) {
   revalidatePath("/actividades");
   if (activityId) {
@@ -378,6 +395,10 @@ export async function createActivity(input: unknown): Promise<ActivityActionResu
     effectiveStatus,
     progressPercent: normalized.progress,
   });
+  const actualEndUpdate = resolveActualEndDateBehavior({
+    previousActualEndDate: null,
+    effectiveStatus,
+  });
 
   await prisma.activity.create({
     data: {
@@ -390,6 +411,7 @@ export async function createActivity(input: unknown): Promise<ActivityActionResu
       dueDate,
       dependsOnActivityId: d.dependsOnActivityId ?? null,
       ...(setActualStart ? { actualStartDate: utcTodayStart() } : {}),
+      ...(actualEndUpdate ?? {}),
       status: effectiveStatus,
       impactsProgress: finalImpacts,
       contributionWeight: weightOutcome.decimal,
@@ -474,6 +496,7 @@ export async function updateActivity(activityId: string, input: unknown): Promis
       progressContribution: true,
       impactsProgress: true,
       actualStartDate: true,
+      actualEndDate: true,
     },
   });
 
@@ -542,6 +565,10 @@ export async function updateActivity(activityId: string, input: unknown): Promis
     effectiveStatus,
     progressPercent: normalized.progress,
   });
+  const actualEndUpdate = resolveActualEndDateBehavior({
+    previousActualEndDate: prev?.actualEndDate ?? null,
+    effectiveStatus,
+  });
 
   await prisma.activity.update({
     where: { id: activityId },
@@ -553,6 +580,7 @@ export async function updateActivity(activityId: string, input: unknown): Promis
       dueDate,
       dependsOnActivityId: d.dependsOnActivityId ?? null,
       ...(setActualStart ? { actualStartDate: utcTodayStart() } : {}),
+      ...(actualEndUpdate ?? {}),
       status: effectiveStatus,
       impactsProgress: finalImpacts,
       contributionWeight: weightOutcome.decimal,
@@ -605,6 +633,7 @@ export async function updateActivityProgressSnapshot(
       contributionWeight: true,
       dependsOnActivityId: true,
       actualStartDate: true,
+      actualEndDate: true,
       keyResult: { select: { allowActivityImpact: true } },
       dependsOnActivity: { select: { status: true } },
     },
@@ -664,12 +693,17 @@ export async function updateActivityProgressSnapshot(
     effectiveStatus,
     progressPercent: normalized.progress,
   });
+  const actualEndUpdate = resolveActualEndDateBehavior({
+    previousActualEndDate: existing.actualEndDate,
+    effectiveStatus,
+  });
   if (
     noStatusChange &&
     noProgressChange &&
     noImpactChange &&
     !needsWeightZero &&
-    !setActualStart
+    !setActualStart &&
+    !actualEndUpdate
   ) {
     return { ok: false, message: "No hay cambios para guardar" };
   }
@@ -681,6 +715,7 @@ export async function updateActivityProgressSnapshot(
       impactsProgress: finalImpacts,
       ...(finalImpacts ? {} : { contributionWeight: new Prisma.Decimal(0) }),
       ...(setActualStart ? { actualStartDate: utcTodayStart() } : {}),
+      ...(actualEndUpdate ?? {}),
       progressContribution:
         normalized.progress == null ? null : new Prisma.Decimal(normalized.progress.toFixed(2)),
     },
@@ -740,6 +775,7 @@ export async function setActivityStatus(
       contributionWeight: true,
       dependsOnActivityId: true,
       actualStartDate: true,
+      actualEndDate: true,
       keyResult: { select: { allowActivityImpact: true } },
       dependsOnActivity: { select: { status: true } },
     },
@@ -781,6 +817,10 @@ export async function setActivityStatus(
     effectiveStatus: status,
     progressPercent: normalized.progress,
   });
+  const actualEndUpdate = resolveActualEndDateBehavior({
+    previousActualEndDate: row.actualEndDate,
+    effectiveStatus: status,
+  });
 
   await prisma.activity.update({
     where: { id: activityId },
@@ -789,6 +829,7 @@ export async function setActivityStatus(
       impactsProgress: finalImpacts,
       ...(finalImpacts ? {} : { contributionWeight: new Prisma.Decimal(0) }),
       ...(setActualStart ? { actualStartDate: utcTodayStart() } : {}),
+      ...(actualEndUpdate ?? {}),
       progressContribution:
         normalized.progress == null ? null : new Prisma.Decimal(normalized.progress.toFixed(2)),
     },
