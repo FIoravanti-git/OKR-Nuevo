@@ -317,14 +317,14 @@ export function ExecutiveReportsDashboard({ session, data }: ExecutiveReportsDas
         description="Progreso consolidado de cada objetivo clave. Si el objetivo institucional padre es solo de seguimiento, verás la etiqueta correspondiente (no afecta promedios globales)."
         icon={Crosshair}
       >
-        <Table>
+        <Table className="min-w-[980px]">
           <TableHeader>
             <TableRow>
               {session.role === "SUPER_ADMIN" ? <TableHead>Empresa</TableHead> : null}
               <TableHead>Objetivo clave</TableHead>
               <TableHead>OI / Proyecto</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead>Avance</TableHead>
+              <TableHead className="min-w-[140px]">Estado</TableHead>
+              <TableHead className="min-w-[180px]">Avance</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -333,20 +333,20 @@ export function ExecutiveReportsDashboard({ session, data }: ExecutiveReportsDas
                 {session.role === "SUPER_ADMIN" ? (
                   <TableCell className="max-w-[120px] truncate text-muted-foreground">{row.companyName}</TableCell>
                 ) : null}
-                <TableCell className="max-w-[200px]">
+                <TableCell className="max-w-[260px] align-top whitespace-normal">
                   <ButtonLink href={`/objetivos-clave/${row.id}`} label={row.title} />
                 </TableCell>
-                <TableCell className="max-w-[220px]">
+                <TableCell className="max-w-[280px] align-top whitespace-normal">
                   <span className="line-clamp-2 text-muted-foreground text-xs">{row.ioTitle}</span>
                   <span className="block text-[0.7rem] text-muted-foreground/80">{row.projectTitle}</span>
                   {!row.impactsGeneralProgress ? <OutOfGeneralScopeLabel /> : null}
                 </TableCell>
-                <TableCell>
+                <TableCell className="align-top whitespace-normal">
                   <Badge variant="outline" className="font-normal">
                     {strategicObjectiveStatusLabel(row.status)}
                   </Badge>
                 </TableCell>
-                <TableCell>
+                <TableCell className="align-top whitespace-normal">
                   <ReportProgressBar value={row.progress} />
                 </TableCell>
               </TableRow>
@@ -366,14 +366,14 @@ export function ExecutiveReportsDashboard({ session, data }: ExecutiveReportsDas
             {nf(summary.keyResultsCount)}.
           </p>
         ) : null}
-        <Table>
+        <Table className="min-w-[1020px]">
           <TableHeader>
             <TableRow>
               {session.role === "SUPER_ADMIN" ? <TableHead>Empresa</TableHead> : null}
               <TableHead>Resultado clave</TableHead>
               <TableHead>Contexto</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead>Avance</TableHead>
+              <TableHead className="min-w-[160px]">Estado</TableHead>
+              <TableHead className="min-w-[180px]">Avance</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -382,15 +382,15 @@ export function ExecutiveReportsDashboard({ session, data }: ExecutiveReportsDas
                 {session.role === "SUPER_ADMIN" ? (
                   <TableCell className="max-w-[120px] truncate text-muted-foreground">{row.companyName}</TableCell>
                 ) : null}
-                <TableCell className="max-w-[200px]">
+                <TableCell className="max-w-[260px] align-top whitespace-normal">
                   <ButtonLink href={`/resultados-clave/${row.id}`} label={row.title} />
                 </TableCell>
-                <TableCell className="max-w-[240px] text-xs text-muted-foreground">
+                <TableCell className="max-w-[320px] text-xs text-muted-foreground align-top whitespace-normal">
                   <span className="line-clamp-2">{row.soTitle}</span>
                   <span className="block opacity-80">{row.projectTitle}</span>
                   {!row.impactsGeneralProgress ? <OutOfGeneralScopeLabel /> : null}
                 </TableCell>
-                <TableCell>
+                <TableCell className="align-top whitespace-normal">
                   <div className="flex flex-col items-start gap-1.5">
                     <Badge variant="outline" className="font-normal">
                       {keyResultStatusLabel(row.status)}
@@ -398,7 +398,7 @@ export function ExecutiveReportsDashboard({ session, data }: ExecutiveReportsDas
                     <KeyResultProgressHealthBadge progressPercent={row.progress} size="compact" />
                   </div>
                 </TableCell>
-                <TableCell>
+                <TableCell className="align-top whitespace-normal">
                   <ReportProgressBar value={row.progress} />
                 </TableCell>
               </TableRow>
