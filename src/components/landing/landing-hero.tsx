@@ -39,7 +39,7 @@ export function LandingHero() {
               <ArrowRight className="size-4" />
             </Button>
             <Button size="lg" variant="outline" className="h-11 px-6" nativeButton={false} render={<Link href="/login" />}>
-              Comenzar ahora
+              Iniciar sesión
             </Button>
           </div>
 

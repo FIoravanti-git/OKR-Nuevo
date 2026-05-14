@@ -10,34 +10,40 @@ type AppJwt = {
   companyId?: string | null;
 };
 
-/** Next.js 16+: sustituye a `middleware.ts` (convención `proxy`). */
-export async function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-
-  /** PWA: el SW y el manifiesto deben servirse sin sesión (instalación / actualizaciones). */
-  if (
+/** PWA, estáticos y assets: sin JWT (instalación, SW, íconos). */
+function isPwaOrStaticPath(pathname: string): boolean {
+  return (
     pathname === "/manifest.json" ||
     pathname === "/sw.js" ||
     pathname.startsWith("/workbox-") ||
-    pathname.startsWith("/swe-worker-")
-  ) {
-    return NextResponse.next();
-  }
+    pathname.startsWith("/swe-worker-") ||
+    pathname.startsWith("/_next") ||
+    pathname === "/favicon.ico" ||
+    /\.(?:svg|png|jpg|jpeg|gif|webp)$/.test(pathname)
+  );
+}
+
+/** Landing pública en la raíz (marketing). */
+function isPublicLandingPath(pathname: string): boolean {
+  return pathname === "/";
+}
+
+/**
+ * Next.js 16+ — convención `src/proxy.ts` (equivalente práctico a middleware).
+ * No usar `middleware.ts` a la vez: el build toma proxy O middleware, no ambos duplicados.
+ */
+export async function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl;
 
   if (pathname.startsWith("/api/auth")) {
     return NextResponse.next();
   }
 
-  if (
-    pathname.startsWith("/_next") ||
-    pathname === "/favicon.ico" ||
-    /\.(?:svg|png|jpg|jpeg|gif|webp)$/.test(pathname)
-  ) {
+  if (isPwaOrStaticPath(pathname)) {
     return NextResponse.next();
   }
 
-  /** Marketing: landing y manifest PWA sin sesión. */
-  if (pathname === "/" || pathname === "/manifest.json") {
+  if (isPublicLandingPath(pathname)) {
     return NextResponse.next();
   }
 
@@ -56,9 +62,7 @@ export async function proxy(request: NextRequest) {
 
   if (!token && !isLogin) {
     const loginUrl = new URL("/login", request.url);
-    if (pathname !== "/") {
-      loginUrl.searchParams.set("callbackUrl", pathname);
-    }
+    loginUrl.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
@@ -85,8 +89,13 @@ export async function proxy(request: NextRequest) {
   return NextResponse.next();
 }
 
+/**
+ * Incluir "/" explícito: algunos despliegues / versiones no matchean solo el grupo negativo
+ * para la raíz, y el proxy no corría en "/" (quedaba lógica distinta o sin control).
+ */
 export const config = {
   matcher: [
+    "/",
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

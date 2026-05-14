@@ -50,7 +50,7 @@ export function LandingFooter() {
               ))}
               <li>
                 <Link className="transition-colors hover:text-foreground" href="/login">
-                  Ingresar
+                  Iniciar sesión
                 </Link>
               </li>
             </ul>

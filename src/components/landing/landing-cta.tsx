@@ -21,7 +21,7 @@ export function LandingCta() {
                 <ArrowRight className="size-4" />
               </Button>
               <Button size="lg" variant="outline" className="h-11 min-w-[200px] px-6" nativeButton={false} render={<Link href="/login" />}>
-                Comenzar ahora
+                Iniciar sesión
               </Button>
             </div>
             <p className="mt-6 text-xs text-muted-foreground sm:text-sm">

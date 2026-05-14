@@ -35,10 +35,10 @@ export function LandingNav() {
           ))}
         </nav>
 
-        <div className="flex items-center gap-1.5 sm:gap-2">
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           <LandingThemeToggle />
-          <Button variant="ghost" size="sm" className="hidden sm:inline-flex" nativeButton={false} render={<Link href="/login" />}>
-            Ingresar
+          <Button variant="ghost" size="sm" className="inline-flex" nativeButton={false} render={<Link href="/login" />}>
+            Iniciar sesión
           </Button>
           <Button size="sm" className="shadow-sm" nativeButton={false} render={<Link href="#contacto" />}>
             Solicitar demo

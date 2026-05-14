@@ -11,7 +11,7 @@ const plans = [
     period: "/mes",
     description: "Equipos que recién estructuran OKRs y necesitan foco sin fricción.",
     features: ["Hasta 10 usuarios", "Dashboard básico", "Gestión OKR completa", "Soporte estándar (ticket)"],
-    cta: "Comenzar ahora",
+    cta: "Iniciar sesión",
     href: "/login",
     variant: "outline" as const,
     highlight: false,
