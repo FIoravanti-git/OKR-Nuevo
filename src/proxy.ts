@@ -36,6 +36,11 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  /** Marketing: landing y manifest PWA sin sesión. */
+  if (pathname === "/" || pathname === "/manifest.json") {
+    return NextResponse.next();
+  }
+
   const secret = process.env.AUTH_SECRET;
   if (!secret) {
     throw new Error("AUTH_SECRET debe estar definida");
