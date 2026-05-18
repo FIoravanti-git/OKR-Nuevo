@@ -1,48 +1,53 @@
 import Link from "next/link";
+import type { LandingPageConfig } from "@/lib/landing-config/types";
 
-const footerLinks = [
-  { href: "#beneficios", label: "Beneficios" },
-  { href: "#funcionalidades", label: "Funcionalidades" },
-  { href: "#producto", label: "Producto" },
-  { href: "#planes", label: "Planes" },
-  { href: "#diferencial", label: "Diferencial" },
-  { href: "#testimonios", label: "Clientes" },
-  { href: "#contacto", label: "Contacto" },
-];
+type Props = {
+  config: LandingPageConfig["footer"];
+  productName: string;
+};
 
-export function LandingFooter() {
+export function LandingFooter({ config, productName }: Props) {
   const year = new Date().getFullYear();
+  const copyright =
+    config.copyrightLine?.replace("{year}", String(year)) ??
+    `© ${year} ${productName}. Todos los derechos reservados.`;
+
+  const whatsappHref = config.contactWhatsApp
+    ? config.contactWhatsApp.startsWith("http")
+      ? config.contactWhatsApp
+      : `https://wa.me/${config.contactWhatsApp.replace(/\D/g, "")}`
+    : null;
 
   return (
     <footer className="border-t border-border/60 bg-muted/20 py-12 dark:bg-muted/10">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-4">
           <div className="lg:col-span-2">
-            <p className="font-heading text-lg font-semibold tracking-tight">OKR Stack</p>
-            <p className="mt-3 max-w-md text-sm leading-relaxed text-muted-foreground">
-              Plataforma empresarial para gestión estratégica y seguimiento de OKR, con foco en áreas, métricas y ejecución medible.
-            </p>
+            <p className="font-heading text-lg font-semibold tracking-tight">{config.brandText}</p>
+            <p className="mt-3 max-w-md text-sm leading-relaxed text-muted-foreground">{config.description}</p>
             <div className="mt-4 space-y-1 text-sm text-muted-foreground">
               <p>
-                <span className="font-medium text-foreground">Ventas:</span>{" "}
-                <a className="text-primary underline-offset-4 hover:underline" href="mailto:ventas@okrstack.com">
-                  ventas@okrstack.com
+                <span className="font-medium text-foreground">Contacto:</span>{" "}
+                <a className="text-primary underline-offset-4 hover:underline" href={`mailto:${config.contactEmail}`}>
+                  {config.contactEmail}
                 </a>
               </p>
-              <p>
-                <span className="font-medium text-foreground">Soporte:</span>{" "}
-                <a className="text-primary underline-offset-4 hover:underline" href="mailto:soporte@okrstack.com">
-                  soporte@okrstack.com
-                </a>
-              </p>
+              {whatsappHref ? (
+                <p>
+                  <span className="font-medium text-foreground">WhatsApp:</span>{" "}
+                  <a className="text-primary underline-offset-4 hover:underline" href={whatsappHref} target="_blank" rel="noreferrer">
+                    Escribinos
+                  </a>
+                </p>
+              ) : null}
             </div>
           </div>
 
           <div>
             <p className="text-sm font-semibold text-foreground">Navegación</p>
             <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
-              {footerLinks.map((l) => (
-                <li key={l.href}>
+              {config.links.map((l) => (
+                <li key={l.id}>
                   <a className="transition-colors hover:text-foreground" href={l.href}>
                     {l.label}
                   </a>
@@ -70,8 +75,8 @@ export function LandingFooter() {
         </div>
 
         <div className="mt-10 flex flex-col items-start justify-between gap-4 border-t border-border/60 pt-8 text-xs text-muted-foreground sm:flex-row sm:items-center">
-          <p>© {year} OKR Stack. Todos los derechos reservados.</p>
-          <p className="text-[0.6875rem]">Hecho para equipos que ejecutan con criterio, no solo con urgencia.</p>
+          <p>{copyright}</p>
+          {config.tagline ? <p className="text-[0.6875rem]">{config.tagline}</p> : null}
         </div>
       </div>
     </footer>

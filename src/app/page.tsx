@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getToken } from "next-auth/jwt";
 import { LandingPage } from "@/components/landing/landing-page";
+import { getLandingPageConfig } from "@/lib/landing-config/data";
 
 /**
  * Nunca redirigir a /login desde aquí.
@@ -37,5 +38,6 @@ export default async function HomePage() {
     }
   }
 
-  return <LandingPage />;
+  const landingConfig = await getLandingPageConfig();
+  return <LandingPage config={landingConfig} />;
 }

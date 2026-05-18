@@ -482,3 +482,199 @@ model PlatformConfig {
 
   @@map("platform_config")
 }
+
+enum LandingItemStatus {
+  ACTIVE
+  INACTIVE
+}
+
+/// Configuración global de la landing pública (fila única `default`).
+model LandingConfig {
+  id        String   @id @default("default") @map("id") @db.VarChar(32)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  productName              String  @default("OKR Stack") @map("product_name") @db.VarChar(128)
+  heroTitle                String  @map("hero_title") @db.Text
+  heroSubtitle             String  @map("hero_subtitle") @db.Text
+  heroPrimaryButtonText    String  @map("hero_primary_button_text") @db.VarChar(128)
+  heroPrimaryButtonUrl     String  @map("hero_primary_button_url") @db.VarChar(512)
+  heroSecondaryButtonText  String? @map("hero_secondary_button_text") @db.VarChar(128)
+  heroSecondaryButtonUrl   String? @map("hero_secondary_button_url") @db.VarChar(512)
+  showSecondaryButton      Boolean @default(true) @map("show_secondary_button")
+  heroFootnote             String? @map("hero_footnote") @db.Text
+  heroBadge1               String? @map("hero_badge_1") @db.VarChar(128)
+  heroBadge2               String? @map("hero_badge_2") @db.VarChar(128)
+
+  logoUrl          String? @map("logo_url") @db.VarChar(512)
+  brandName        String  @map("brand_name") @db.VarChar(128)
+  loginButtonText  String  @map("login_button_text") @db.VarChar(64)
+  showDemoButton   Boolean @default(true) @map("show_demo_button")
+  demoButtonText   String  @map("demo_button_text") @db.VarChar(64)
+  demoButtonUrl    String  @map("demo_button_url") @db.VarChar(512)
+  navLinksJson     Json    @default("[]") @map("nav_links_json")
+
+  benefitsEyebrow    String @map("benefits_eyebrow") @db.VarChar(64)
+  benefitsTitle      String @map("benefits_title") @db.Text
+  benefitsSubtitle   String @map("benefits_subtitle") @db.Text
+
+  featuresEyebrow    String @map("features_eyebrow") @db.VarChar(64)
+  featuresTitle      String @map("features_title") @db.Text
+  featuresSubtitle   String @map("features_subtitle") @db.Text
+
+  previewEyebrow       String  @map("preview_eyebrow") @db.VarChar(64)
+  previewTitle         String  @map("preview_title") @db.Text
+  previewSubtitle      String  @map("preview_subtitle") @db.Text
+  previewBadgeText     String? @map("preview_badge_text") @db.VarChar(128)
+  previewProgressPercent String @default("68%") @map("preview_progress_percent") @db.VarChar(16)
+  previewBarsJson      Json    @default("[]") @map("preview_bars_json")
+  previewStatsJson     Json    @default("[]") @map("preview_stats_json")
+  previewAreasJson     Json    @default("[]") @map("preview_areas_json")
+  previewKrsJson       Json    @default("[]") @map("preview_krs_json")
+  previewActivitiesJson Json   @default("[]") @map("preview_activities_json")
+
+  differentiatorEyebrow    String @map("differentiator_eyebrow") @db.VarChar(64)
+  differentiatorTitle      String @map("differentiator_title") @db.Text
+  differentiatorSubtitle   String @map("differentiator_subtitle") @db.Text
+
+  pricingEyebrow    String @map("pricing_eyebrow") @db.VarChar(64)
+  pricingTitle      String @map("pricing_title") @db.Text
+  pricingSubtitle   String @map("pricing_subtitle") @db.Text
+
+  testimonialsEyebrow    String  @map("testimonials_eyebrow") @db.VarChar(64)
+  testimonialsTitle      String  @map("testimonials_title") @db.Text
+  testimonialsSubtitle String? @map("testimonials_subtitle") @db.Text
+
+  ctaTitle                 String  @map("cta_title") @db.Text
+  ctaSubtitle              String  @map("cta_subtitle") @db.Text
+  ctaButtonText            String  @map("cta_button_text") @db.VarChar(128)
+  ctaButtonUrl             String  @map("cta_button_url") @db.VarChar(512)
+  ctaSecondaryButtonText   String? @map("cta_secondary_button_text") @db.VarChar(128)
+  ctaSecondaryButtonUrl    String? @map("cta_secondary_button_url") @db.VarChar(512)
+  ctaFootnote              String? @map("cta_footnote") @db.Text
+
+  footerBrandText      String  @map("footer_brand_text") @db.VarChar(128)
+  footerDescription    String  @map("footer_description") @db.Text
+  contactEmail         String  @map("contact_email") @db.VarChar(255)
+  contactWhatsApp      String? @map("contact_whatsapp") @db.VarChar(64)
+  copyrightLine        String? @map("copyright_line") @db.Text
+  footerTagline        String? @map("footer_tagline") @db.Text
+
+  benefits            LandingBenefit[]
+  features            LandingFeature[]
+  plans               LandingPlan[]
+  testimonials        LandingTestimonial[]
+  differentiatorPoints LandingDifferentiatorPoint[]
+  footerLinks         LandingFooterLink[]
+
+  @@map("landing_config")
+}
+
+model LandingBenefit {
+  id          String             @id @default(cuid()) @map("id")
+  configId    String             @default("default") @map("config_id") @db.VarChar(32)
+  title       String             @map("title") @db.VarChar(256)
+  description String             @map("description") @db.Text
+  iconKey     String             @map("icon_key") @db.VarChar(64)
+  sortOrder   Int                @default(0) @map("sort_order")
+  status      LandingItemStatus  @default(ACTIVE) @map("status")
+  createdAt   DateTime           @default(now()) @map("created_at")
+  updatedAt   DateTime           @updatedAt @map("updated_at")
+
+  config LandingConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+
+  @@index([configId, sortOrder])
+  @@map("landing_benefits")
+}
+
+model LandingFeature {
+  id          String             @id @default(cuid()) @map("id")
+  configId    String             @default("default") @map("config_id") @db.VarChar(32)
+  title       String             @map("title") @db.VarChar(256)
+  description String             @map("description") @db.Text
+  iconKey     String             @map("icon_key") @db.VarChar(64)
+  sortOrder   Int                @default(0) @map("sort_order")
+  status      LandingItemStatus  @default(ACTIVE) @map("status")
+  createdAt   DateTime           @default(now()) @map("created_at")
+  updatedAt   DateTime           @updatedAt @map("updated_at")
+
+  config LandingConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+
+  @@index([configId, sortOrder])
+  @@map("landing_features")
+}
+
+model LandingPlan {
+  id            String             @id @default(cuid()) @map("id")
+  configId      String             @default("default") @map("config_id") @db.VarChar(32)
+  name          String             @map("name") @db.VarChar(128)
+  description   String             @map("description") @db.Text
+  priceLabel    String             @map("price_label") @db.VarChar(64)
+  periodLabel   String?            @map("period_label") @db.VarChar(32)
+  featuresJson  Json               @default("[]") @map("features_json")
+  isHighlighted Boolean            @default(false) @map("is_highlighted")
+  highlightLabel String?           @map("highlight_label") @db.VarChar(64)
+  buttonText    String             @map("button_text") @db.VarChar(128)
+  buttonUrl     String             @map("button_url") @db.VarChar(512)
+  showPrice     Boolean            @default(true) @map("show_price")
+  sortOrder     Int                @default(0) @map("sort_order")
+  status        LandingItemStatus  @default(ACTIVE) @map("status")
+  createdAt     DateTime           @default(now()) @map("created_at")
+  updatedAt     DateTime           @updatedAt @map("updated_at")
+
+  config LandingConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+
+  @@index([configId, sortOrder])
+  @@map("landing_plans")
+}
+
+model LandingTestimonial {
+  id           String             @id @default(cuid()) @map("id")
+  configId     String             @default("default") @map("config_id") @db.VarChar(32)
+  name         String             @map("name") @db.VarChar(128)
+  roleCompany  String             @map("role_company") @db.VarChar(256)
+  comment      String             @map("comment") @db.Text
+  avatarUrl    String?            @map("avatar_url") @db.VarChar(512)
+  sortOrder    Int                @default(0) @map("sort_order")
+  status       LandingItemStatus  @default(ACTIVE) @map("status")
+  createdAt    DateTime           @default(now()) @map("created_at")
+  updatedAt    DateTime           @updatedAt @map("updated_at")
+
+  config LandingConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+
+  @@index([configId, sortOrder])
+  @@map("landing_testimonials")
+}
+
+model LandingDifferentiatorPoint {
+  id          String             @id @default(cuid()) @map("id")
+  configId    String             @default("default") @map("config_id") @db.VarChar(32)
+  title       String             @map("title") @db.VarChar(256)
+  description String             @map("description") @db.Text
+  iconKey     String             @map("icon_key") @db.VarChar(64)
+  sortOrder   Int                @default(0) @map("sort_order")
+  status      LandingItemStatus  @default(ACTIVE) @map("status")
+  createdAt   DateTime           @default(now()) @map("created_at")
+  updatedAt   DateTime           @updatedAt @map("updated_at")
+
+  config LandingConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+
+  @@index([configId, sortOrder])
+  @@map("landing_differentiator_points")
+}
+
+model LandingFooterLink {
+  id        String             @id @default(cuid()) @map("id")
+  configId  String             @default("default") @map("config_id") @db.VarChar(32)
+  label     String             @map("label") @db.VarChar(128)
+  href      String             @map("href") @db.VarChar(512)
+  sortOrder Int                @default(0) @map("sort_order")
+  status    LandingItemStatus  @default(ACTIVE) @map("status")
+  createdAt DateTime           @default(now()) @map("created_at")
+  updatedAt DateTime           @updatedAt @map("updated_at")
+
+  config LandingConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+
+  @@index([configId, sortOrder])
+  @@map("landing_footer_links")
+}

@@ -1,6 +1,8 @@
 import { PageHeading } from "@/components/layout/page-heading";
 import { CompanyTenantSettingsForm } from "@/components/configuracion/company-tenant-settings-form";
+import { LandingSettingsPanel } from "@/components/configuracion/landing-settings-panel";
 import { PlatformSettingsForm } from "@/components/configuracion/platform-settings-form";
+import { getLandingAdminConfig } from "@/lib/landing-config/data";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireRole } from "@/lib/auth/session-user";
 import { prisma } from "@/lib/prisma";
@@ -17,14 +19,16 @@ export default async function ConfiguracionPage() {
       supportEmail: row?.supportEmail ?? "",
       noticeBanner: row?.noticeBanner ?? "",
     };
+    const landingAdmin = await getLandingAdminConfig();
 
     return (
       <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
         <PageHeading
           title="Configuración"
-          description="Parámetros globales de la plataforma: nombre, soporte y avisos. Solo super administradores."
+          description="Parámetros globales de la plataforma y contenido de la landing pública. Solo super administradores."
         />
         <PlatformSettingsForm hasPersistedRow={hasPersistedRow} defaultValues={defaultValues} />
+        <LandingSettingsPanel hasPersistedRow={landingAdmin.hasPersistedRow} initialConfig={landingAdmin.config} />
       </div>
     );
   }

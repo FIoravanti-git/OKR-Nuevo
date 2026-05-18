@@ -2,8 +2,15 @@ import Link from "next/link";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import type { LandingPageConfig } from "@/lib/landing-config/types";
 
-export function LandingHero() {
+type Props = {
+  config: LandingPageConfig;
+};
+
+export function LandingHero({ config }: Props) {
+  const { hero } = config;
+
   return (
     <section className="relative overflow-hidden pt-24 pb-16 sm:pt-28 sm:pb-24 lg:pt-32 lg:pb-28">
       <div className="pointer-events-none absolute inset-0 -z-10">
@@ -14,38 +21,51 @@ export function LandingHero() {
 
       <div className="mx-auto grid max-w-6xl gap-12 px-4 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:gap-10 lg:px-8">
         <div className="animate-in fade-in slide-in-from-bottom-3 duration-700">
-          <div className="mb-5 flex flex-wrap items-center gap-2">
-            <Badge variant="secondary" className="gap-1.5 border border-border/60 font-semibold">
-              <Sparkles className="size-3" />
-              Instalable como app (PWA)
-            </Badge>
-            <Badge variant="outline" className="font-medium">
-              Multiempresa · Roles y permisos
-            </Badge>
-          </div>
+          {(hero.badge1 || hero.badge2) && (
+            <div className="mb-5 flex flex-wrap items-center gap-2">
+              {hero.badge1 ? (
+                <Badge variant="secondary" className="gap-1.5 border border-border/60 font-semibold">
+                  <Sparkles className="size-3" />
+                  {hero.badge1}
+                </Badge>
+              ) : null}
+              {hero.badge2 ? (
+                <Badge variant="outline" className="font-medium">
+                  {hero.badge2}
+                </Badge>
+              ) : null}
+            </div>
+          )}
 
           <h1 className="font-heading text-4xl font-semibold tracking-tight text-balance sm:text-5xl lg:text-[3.25rem] lg:leading-[1.08]">
-            OKR Stack: estrategia que se ejecuta, no que se archiva.
+            {hero.title}
           </h1>
 
           <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground text-pretty sm:text-lg">
-            La plataforma empresarial para alinear objetivos institucionales, resultados clave y actividades
-            con métricas, ponderaciones y visibilidad ejecutiva en tiempo real.
+            {hero.subtitle}
           </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-            <Button size="lg" className="h-11 px-6 shadow-md shadow-primary/15" nativeButton={false} render={<Link href="#contacto" />}>
-              Solicitar demo
+            <Button size="lg" className="h-11 px-6 shadow-md shadow-primary/15" nativeButton={false} render={<Link href={hero.primaryButtonUrl} />}>
+              {hero.primaryButtonText}
               <ArrowRight className="size-4" />
             </Button>
-            <Button size="lg" variant="outline" className="h-11 px-6" nativeButton={false} render={<Link href="/login" />}>
-              Iniciar sesión
-            </Button>
+            {hero.showSecondaryButton && hero.secondaryButtonText ? (
+              <Button
+                size="lg"
+                variant="outline"
+                className="h-11 px-6"
+                nativeButton={false}
+                render={<Link href={hero.secondaryButtonUrl} />}
+              >
+                {hero.secondaryButtonText}
+              </Button>
+            ) : null}
           </div>
 
-          <p className="mt-4 text-xs text-muted-foreground sm:text-sm">
-            Onboarding guiado · Seguridad pensada para equipos distribuidos · Experiencia tipo app en móvil y escritorio
-          </p>
+          {hero.footnote ? (
+            <p className="mt-4 text-xs text-muted-foreground sm:text-sm">{hero.footnote}</p>
+          ) : null}
         </div>
 
         <HeroDashboardMock />

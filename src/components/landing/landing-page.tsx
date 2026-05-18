@@ -8,22 +8,27 @@ import { LandingDifferentiator } from "@/components/landing/landing-differentiat
 import { LandingTestimonials } from "@/components/landing/landing-testimonials";
 import { LandingCta } from "@/components/landing/landing-cta";
 import { LandingFooter } from "@/components/landing/landing-footer";
+import type { LandingPageConfig } from "@/lib/landing-config/types";
 
-export function LandingPage() {
+type Props = {
+  config: LandingPageConfig;
+};
+
+export function LandingPage({ config }: Props) {
   return (
     <div className="min-h-svh scroll-smooth bg-background text-foreground">
-      <LandingNav />
+      <LandingNav config={config} />
       <main>
-        <LandingHero />
-        <LandingBenefits />
-        <LandingFeatures />
-        <LandingDashboardPreview />
-        <LandingPricing />
-        <LandingDifferentiator />
-        <LandingTestimonials />
-        <LandingCta />
+        <LandingHero config={config} />
+        <LandingBenefits config={config.benefits} />
+        <LandingFeatures config={config.features} />
+        <LandingDashboardPreview config={config.preview} />
+        <LandingPricing config={config.pricing} />
+        <LandingDifferentiator config={config.differentiator} />
+        <LandingTestimonials config={config.testimonials} />
+        <LandingCta config={config.cta} />
       </main>
-      <LandingFooter />
+      <LandingFooter config={config.footer} productName={config.productName} />
     </div>
   );
 }
