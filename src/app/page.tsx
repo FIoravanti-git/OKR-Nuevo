@@ -3,6 +3,9 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { LandingPage } from "@/components/landing/landing-page";
 
+/** Siempre evaluar sesión en servidor; nunca redirigir a /login desde aquí (eso lo hace el proxy en rutas privadas). */
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: { absolute: "OKR Stack | Estrategia que se ejecuta" },
   description:

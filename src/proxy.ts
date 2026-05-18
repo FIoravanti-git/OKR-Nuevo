@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import type { UserRole } from "@/generated/prisma";
+import { isPublicPath } from "@/lib/auth/public-paths";
 import { requiresCompanyContext, routeRolePolicies } from "@/lib/auth/route-policies";
 
 type AppJwt = {
@@ -10,40 +11,14 @@ type AppJwt = {
   companyId?: string | null;
 };
 
-/** PWA, estáticos y assets: sin JWT (instalación, SW, íconos). */
-function isPwaOrStaticPath(pathname: string): boolean {
-  return (
-    pathname === "/manifest.json" ||
-    pathname === "/sw.js" ||
-    pathname.startsWith("/workbox-") ||
-    pathname.startsWith("/swe-worker-") ||
-    pathname.startsWith("/_next") ||
-    pathname === "/favicon.ico" ||
-    /\.(?:svg|png|jpg|jpeg|gif|webp)$/.test(pathname)
-  );
-}
-
-/** Landing pública en la raíz (marketing). */
-function isPublicLandingPath(pathname: string): boolean {
-  return pathname === "/";
-}
-
 /**
- * Next.js 16+ — convención `src/proxy.ts` (equivalente práctico a middleware).
- * No usar `middleware.ts` a la vez: el build toma proxy O middleware, no ambos duplicados.
+ * Next.js 16+: `src/proxy.ts` (sustituye a `middleware.ts`).
+ * Las rutas públicas deben salir antes de JWT para que "/" muestre la landing.
  */
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (pathname.startsWith("/api/auth")) {
-    return NextResponse.next();
-  }
-
-  if (isPwaOrStaticPath(pathname)) {
-    return NextResponse.next();
-  }
-
-  if (isPublicLandingPath(pathname)) {
+  if (isPublicPath(pathname)) {
     return NextResponse.next();
   }
 
@@ -58,44 +33,41 @@ export async function proxy(request: NextRequest) {
     secureCookie: process.env.NODE_ENV === "production",
   })) as AppJwt | null;
 
-  const isLogin = pathname === "/login";
-
-  if (!token && !isLogin) {
+  if (!token) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  if (token && isLogin) {
+  if (pathname === "/login") {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  if (token) {
-    for (const policy of routeRolePolicies) {
-      if (policy.match(pathname) && !policy.roles.includes(token.role as UserRole)) {
-        return NextResponse.redirect(new URL("/dashboard", request.url));
-      }
-    }
-
-    if (
-      requiresCompanyContext(pathname) &&
-      (token.companyId == null || token.companyId === "") &&
-      token.role !== "SUPER_ADMIN"
-    ) {
+  for (const policy of routeRolePolicies) {
+    if (policy.match(pathname) && !policy.roles.includes(token.role as UserRole)) {
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
+  }
+
+  if (
+    requiresCompanyContext(pathname) &&
+    (token.companyId == null || token.companyId === "") &&
+    token.role !== "SUPER_ADMIN"
+  ) {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
   return NextResponse.next();
 }
 
-/**
- * Incluir "/" explícito: algunos despliegues / versiones no matchean solo el grupo negativo
- * para la raíz, y el proxy no corría en "/" (quedaba lógica distinta o sin control).
- */
 export const config = {
   matcher: [
     "/",
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/login",
+    "/manifest.json",
+    "/sw.js",
+    "/icon-192.png",
+    "/icon-512.png",
+    "/((?!_next/static|_next/image|favicon.ico|sw.js|manifest.json|icon-192.png|icon-512.png|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };
