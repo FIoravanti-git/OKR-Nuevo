@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import type { UserRole } from "@/generated/prisma";
+import type { AppBrandingConfig } from "@/lib/app-branding/types";
 import { getCurrentPageLabel } from "@/config/breadcrumbs";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { UserMenu } from "@/components/layout/user-menu";
@@ -11,9 +12,10 @@ import { cn } from "@/lib/utils";
 
 type AppTopBarProps = {
   role: UserRole;
+  branding: AppBrandingConfig;
 };
 
-export function AppTopBar({ role }: AppTopBarProps) {
+export function AppTopBar({ role, branding }: AppTopBarProps) {
   const pathname = usePathname();
   const pageLabel = getCurrentPageLabel(pathname);
 
@@ -26,7 +28,7 @@ export function AppTopBar({ role }: AppTopBarProps) {
       )}
     >
       <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4">
-        <MobileNav role={role} />
+        <MobileNav role={role} branding={branding} />
 
         <nav aria-label="Migas de pan" className="flex min-w-0 items-center gap-1.5 text-sm">
           <Link

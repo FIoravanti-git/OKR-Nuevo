@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { BarChart3, LogOut } from "lucide-react";
+import { LogOut } from "lucide-react";
+import { AppBrandMark } from "@/components/branding/app-brand-mark";
+import type { AppBrandingConfig } from "@/lib/app-branding/types";
 import type { UserRole } from "@/generated/prisma";
 import { filterNavSectionsByRole } from "@/config/navigation";
 import { cn } from "@/lib/utils";
@@ -13,24 +15,18 @@ import { Separator } from "@/components/ui/separator";
 
 type AppSidebarProps = {
   role: UserRole;
+  branding: AppBrandingConfig;
 };
 
-export function AppSidebar({ role }: AppSidebarProps) {
+export function AppSidebar({ role, branding }: AppSidebarProps) {
   const pathname = usePathname();
   const sections = filterNavSectionsByRole(role);
 
   return (
     <aside className="hidden h-svh w-[4.75rem] shrink-0 flex-col border-r border-border/50 bg-gradient-to-b from-sidebar via-sidebar to-sidebar/98 shadow-[1px_0_0_0_oklch(0_0_0/0.04)] dark:shadow-[1px_0_0_0_oklch(1_0_0/0.06)] lg:flex lg:w-[17.5rem]">
-      <div className="flex h-14 items-center justify-center border-b border-border/40 px-2 lg:justify-start lg:gap-3 lg:px-4">
-        <span className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900 text-white shadow-md shadow-slate-900/25 ring-1 ring-white/10 dark:from-primary/90 dark:via-primary dark:to-slate-900 dark:shadow-primary/20">
-          <BarChart3 className="size-[1.05rem]" strokeWidth={2.25} />
-        </span>
-        <div className="hidden min-w-0 lg:block">
-          <p className="truncate text-sm font-semibold tracking-tight text-sidebar-foreground">OKR Stack</p>
-          <p className="truncate text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-            Enterprise
-          </p>
-        </div>
+      <div className="flex h-14 items-center justify-center border-b border-border/40 px-2 lg:justify-start lg:px-4">
+        <AppBrandMark branding={branding} variant="sidebar" subtitle="Enterprise" className="hidden lg:flex" />
+        <AppBrandMark branding={branding} variant="sidebar" className="lg:hidden [&_p:last-child]:hidden" />
       </div>
 
       <ScrollArea className="flex-1 px-2 py-4 lg:px-3">

@@ -1,16 +1,18 @@
 import Link from "next/link";
+import { AppBrandMark } from "@/components/branding/app-brand-mark";
+import type { AppBrandingConfig } from "@/lib/app-branding/types";
 import type { LandingPageConfig } from "@/lib/landing-config/types";
 
 type Props = {
   config: LandingPageConfig["footer"];
-  productName: string;
+  branding: AppBrandingConfig;
 };
 
-export function LandingFooter({ config, productName }: Props) {
+export function LandingFooter({ config, branding }: Props) {
   const year = new Date().getFullYear();
   const copyright =
     config.copyrightLine?.replace("{year}", String(year)) ??
-    `© ${year} ${productName}. Todos los derechos reservados.`;
+    `© ${year} ${branding.appName}. Todos los derechos reservados.`;
 
   const whatsappHref = config.contactWhatsApp
     ? config.contactWhatsApp.startsWith("http")
@@ -23,7 +25,10 @@ export function LandingFooter({ config, productName }: Props) {
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-4">
           <div className="lg:col-span-2">
-            <p className="font-heading text-lg font-semibold tracking-tight">{config.brandText}</p>
+            <AppBrandMark branding={branding} variant="footer" />
+            {config.brandText !== branding.appName ? (
+              <p className="mt-2 text-sm text-muted-foreground">{config.brandText}</p>
+            ) : null}
             <p className="mt-3 max-w-md text-sm leading-relaxed text-muted-foreground">{config.description}</p>
             <div className="mt-4 space-y-1 text-sm text-muted-foreground">
               <p>

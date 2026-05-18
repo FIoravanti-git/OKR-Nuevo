@@ -2,7 +2,9 @@ import { PageHeading } from "@/components/layout/page-heading";
 import { CompanyTenantSettingsForm } from "@/components/configuracion/company-tenant-settings-form";
 import { LandingSettingsPanel } from "@/components/configuracion/landing-settings-panel";
 import { PlatformSettingsForm } from "@/components/configuracion/platform-settings-form";
+import { getAppBrandingAdmin } from "@/lib/app-branding/data";
 import { getLandingAdminConfig } from "@/lib/landing-config/data";
+import { GlobalBrandingForm } from "@/components/configuracion/global-branding-form";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireRole } from "@/lib/auth/session-user";
 import { prisma } from "@/lib/prisma";
@@ -19,15 +21,26 @@ export default async function ConfiguracionPage() {
       supportEmail: row?.supportEmail ?? "",
       noticeBanner: row?.noticeBanner ?? "",
     };
-    const landingAdmin = await getLandingAdminConfig();
+    const [landingAdmin, brandingAdmin] = await Promise.all([getLandingAdminConfig(), getAppBrandingAdmin()]);
 
     return (
       <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
         <PageHeading
           title="Configuración"
-          description="Parámetros globales de la plataforma y contenido de la landing pública. Solo super administradores."
+          description="Parámetros globales de la plataforma, marca del sistema y contenido de la landing. Solo super administradores."
         />
         <PlatformSettingsForm hasPersistedRow={hasPersistedRow} defaultValues={defaultValues} />
+        <GlobalBrandingForm
+          hasPersistedRow={brandingAdmin.hasPersistedRow}
+          defaultValues={{
+            appName: brandingAdmin.config.appName,
+            logoUrl: brandingAdmin.config.logoUrl ?? "",
+            logoAlt: brandingAdmin.config.logoAlt ?? "",
+            faviconUrl: brandingAdmin.config.faviconUrl ?? "",
+            primaryColor: brandingAdmin.config.primaryColor,
+            secondaryColor: brandingAdmin.config.secondaryColor,
+          }}
+        />
         <LandingSettingsPanel hasPersistedRow={landingAdmin.hasPersistedRow} initialConfig={landingAdmin.config} />
       </div>
     );

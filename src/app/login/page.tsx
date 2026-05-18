@@ -3,25 +3,23 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import Link from "next/link";
 import { auth } from "@/auth";
-import {
-  BarChart3,
-  CheckCircle2,
-  Layers,
-  Lock,
-  Shield,
-  Sparkles,
-} from "lucide-react";
+import { CheckCircle2, Layers, Lock, Shield, Sparkles } from "lucide-react";
+import { AppBrandMark } from "@/components/branding/app-brand-mark";
 import { LoginForm } from "@/components/auth/login-form";
+import { getAppBranding } from "@/lib/app-branding/data";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export const metadata: Metadata = {
-  title: "Ingresar | OKR Stack",
-  description: "Acceso seguro al panel multiempresa",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const branding = await getAppBranding();
+  return {
+    title: `Ingresar | ${branding.appName}`,
+    description: "Acceso seguro al panel multiempresa",
+  };
+}
 
 function LoginFormFallback() {
   return (
@@ -38,6 +36,8 @@ export default async function LoginPage() {
   if (session?.user) {
     redirect("/dashboard");
   }
+
+  const branding = await getAppBranding();
 
   return (
     <div className="relative min-h-svh overflow-hidden bg-[#07060c] text-zinc-100">
@@ -79,17 +79,9 @@ export default async function LoginPage() {
         <div className="mb-12 flex flex-1 flex-col justify-center lg:mb-0 lg:max-w-[28rem] xl:max-w-md">
           <Link
             href="/login"
-            className="group mb-12 inline-flex w-fit items-center gap-3.5 rounded-2xl border border-white/[0.08] bg-white/[0.04] px-3.5 py-3 shadow-xl shadow-black/30 ring-1 ring-white/[0.06] backdrop-blur-md transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.06]"
+            className="group mb-12 inline-flex w-fit rounded-2xl border border-white/[0.08] bg-white/[0.04] px-3.5 py-3 shadow-xl shadow-black/30 ring-1 ring-white/[0.06] backdrop-blur-md transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.06]"
           >
-            <span className="relative flex size-[3.25rem] items-center justify-center rounded-xl bg-gradient-to-br from-slate-600 via-slate-700 to-slate-900 text-white shadow-lg shadow-black/40 ring-1 ring-white/15">
-              <BarChart3 className="size-[1.35rem]" strokeWidth={2.25} />
-            </span>
-            <span className="text-left">
-              <span className="block text-[0.9375rem] font-semibold tracking-tight text-white">OKR Stack</span>
-              <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-                Enterprise
-              </span>
-            </span>
+            <AppBrandMark branding={branding} variant="login" subtitle="Enterprise" />
           </Link>
 
           <p className="mb-3 text-[0.6875rem] font-bold uppercase tracking-[0.2em] text-violet-400/90">
@@ -193,7 +185,7 @@ export default async function LoginPage() {
 
       <footer className="relative z-10 border-t border-white/[0.06] px-6 py-5 text-center">
         <p className="text-[0.75rem] text-zinc-500">
-          <span className="font-medium text-zinc-400">OKR Stack</span>
+          <span className="font-medium text-zinc-400">{branding.appName}</span>
           <span className="mx-2 text-zinc-700">·</span>
           <span>Multiempresa profesional</span>
           <span className="mx-2 text-zinc-700">·</span>

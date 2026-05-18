@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { BarChart3, Menu } from "lucide-react";
+import { Menu } from "lucide-react";
+import { AppBrandMark } from "@/components/branding/app-brand-mark";
+import type { AppBrandingConfig } from "@/lib/app-branding/types";
 import type { UserRole } from "@/generated/prisma";
 import { filterNavSectionsByRole } from "@/config/navigation";
 import { cn } from "@/lib/utils";
@@ -14,9 +16,10 @@ import { Separator } from "@/components/ui/separator";
 
 type MobileNavProps = {
   role: UserRole;
+  branding: AppBrandingConfig;
 };
 
-export function MobileNav({ role }: MobileNavProps) {
+export function MobileNav({ role, branding }: MobileNavProps) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const sections = filterNavSectionsByRole(role);
@@ -37,15 +40,8 @@ export function MobileNav({ role }: MobileNavProps) {
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="left" className="flex w-[min(100vw,18rem)] flex-col gap-0 p-0" showCloseButton>
           <SheetHeader className="border-b border-border/60 px-4 py-4 text-left">
-            <div className="flex items-center gap-2.5">
-              <span className="flex size-9 items-center justify-center rounded-lg bg-gradient-to-br from-slate-700 to-slate-900 text-white shadow-md dark:from-primary/90 dark:to-slate-900">
-                <BarChart3 className="size-[1.05rem]" strokeWidth={2.25} />
-              </span>
-              <div>
-                <SheetTitle className="text-left text-sm font-semibold">OKR Stack</SheetTitle>
-                <p className="text-[0.65rem] font-medium uppercase tracking-wider text-muted-foreground">Navegación</p>
-              </div>
-            </div>
+            <SheetTitle className="sr-only">{branding.appName}</SheetTitle>
+            <AppBrandMark branding={branding} variant="sidebar" subtitle="Navegación" />
           </SheetHeader>
           <ScrollArea className="flex-1 px-2 py-3">
             <nav className="flex flex-col gap-4" aria-label="Principal">

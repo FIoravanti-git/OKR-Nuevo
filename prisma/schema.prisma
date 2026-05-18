@@ -483,6 +483,21 @@ model PlatformConfig {
   @@map("platform_config")
 }
 
+/// Marca global del SaaS (no por empresa). Fila única `default`.
+model AppBranding {
+  id             String   @id @default("default") @map("id") @db.VarChar(32)
+  appName        String   @default("OKR Stack") @map("app_name") @db.VarChar(128)
+  logoUrl        String?  @map("logo_url") @db.VarChar(512)
+  logoAlt        String?  @map("logo_alt") @db.VarChar(256)
+  faviconUrl     String?  @map("favicon_url") @db.VarChar(512)
+  primaryColor   String   @default("#334155") @map("primary_color") @db.VarChar(32)
+  secondaryColor String   @default("#64748b") @map("secondary_color") @db.VarChar(32)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("app_branding")
+}
+
 enum LandingItemStatus {
   ACTIVE
   INACTIVE

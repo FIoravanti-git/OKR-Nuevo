@@ -2,34 +2,29 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LandingThemeToggle } from "@/components/landing/landing-theme-toggle";
+import { AppBrandMark } from "@/components/branding/app-brand-mark";
+import type { AppBrandingConfig } from "@/lib/app-branding/types";
 import type { LandingPageConfig } from "@/lib/landing-config/types";
 
 type Props = {
   config: LandingPageConfig;
+  branding: AppBrandingConfig;
 };
 
-export function LandingNav({ config }: Props) {
-  const { nav, productName } = config;
-  const brandParts = nav.brandName.trim().split(/\s+/);
-  const brandShort = brandParts[0] ?? productName;
-  const brandRest = brandParts.slice(1).join(" ");
+export function LandingNav({ config, branding }: Props) {
+  const { nav } = config;
 
   return (
     <header className="fixed inset-x-0 top-0 z-50 border-b border-border/60 bg-background/75 backdrop-blur-xl supports-[backdrop-filter]:bg-background/55">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4 sm:h-16 sm:px-6 lg:px-8">
-        <Link href="/" className="flex items-center gap-2 font-heading text-base font-semibold tracking-tight sm:text-lg">
-          {nav.logoUrl ? (
-            <img src={nav.logoUrl} alt={nav.brandName} className="size-8 rounded-lg object-contain" />
-          ) : (
-            <>
-              <span className="rounded-lg bg-primary/15 px-2 py-0.5 text-primary">{brandShort}</span>
-              {brandRest ? <span className="text-foreground">{brandRest}</span> : null}
-            </>
-          )}
-          <Badge variant="secondary" className="hidden text-[0.625rem] font-semibold uppercase tracking-wider sm:inline-flex">
+        <div className="flex min-w-0 items-center gap-2">
+          <Link href="/" className="min-w-0">
+            <AppBrandMark branding={branding} variant="landing" />
+          </Link>
+          <Badge variant="secondary" className="hidden shrink-0 text-[0.625rem] font-semibold uppercase tracking-wider sm:inline-flex">
             PWA
           </Badge>
-        </Link>
+        </div>
 
         <nav className="hidden items-center gap-1 md:flex">
           {nav.links.map((l) => (

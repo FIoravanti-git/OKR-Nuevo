@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getToken } from "next-auth/jwt";
 import { LandingPage } from "@/components/landing/landing-page";
+import { getAppBranding } from "@/lib/app-branding/data";
 import { getLandingPageConfig } from "@/lib/landing-config/data";
 
 /**
@@ -38,6 +39,6 @@ export default async function HomePage() {
     }
   }
 
-  const landingConfig = await getLandingPageConfig();
-  return <LandingPage config={landingConfig} />;
+  const [landingConfig, branding] = await Promise.all([getLandingPageConfig(), getAppBranding()]);
+  return <LandingPage config={landingConfig} branding={branding} />;
 }
