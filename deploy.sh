@@ -73,7 +73,8 @@ if [[ "${SKIP_PROXY_CHECK}" != "1" ]] && [[ -f src/proxy.ts ]]; then
     echo "Error: proxy.ts incluye \"/\" en matcher (versión antigua que redirige a login)." >&2
     exit 1
   fi
-  if ! grep -q '"/dashboard/:path*"' src/proxy.ts; then
+  # -F: el asterisco en :path* es literal (sin -F grep lo trata como cuantificador regex)
+  if ! grep -Fq '"/dashboard/:path*"' src/proxy.ts; then
     echo "Error: proxy.ts no tiene matcher de rutas privadas esperado." >&2
     exit 1
   fi
