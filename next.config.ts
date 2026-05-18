@@ -9,6 +9,9 @@ const withPWA = withPWAInit({
   dest: "public",
   disable: process.env.NODE_ENV === "development",
   register: true,
+  /** Evita que PWA reescriba/cachee "/" hacia start_url antiguo (/login). */
+  cacheStartUrl: false,
+  dynamicStartUrl: false,
   /** Navegaciones con next/link quedan en caché para uso offline básico. */
   cacheOnFrontEndNav: true,
   extendDefaultRuntimeCaching: true,

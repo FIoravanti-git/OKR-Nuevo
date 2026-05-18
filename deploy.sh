@@ -66,4 +66,11 @@ echo "==> Levantando / recargando servicios"
 echo "==> Estado"
 "${DC[@]}" ps
 
+if [[ -x scripts/verify-public-routes.sh ]]; then
+  echo "==> Verificación HTTP"
+  sleep 2
+  scripts/verify-public-routes.sh || true
+fi
+
 echo "==> Listo. App (host network): http://127.0.0.1:3040 (reverso proxy típico: Nginx)."
+echo "    Si subiste cambios desde otra máquina, usá ./deploy-pull.sh en el VPS (git pull + rebuild)."

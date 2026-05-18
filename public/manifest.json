@@ -2,7 +2,7 @@
   "name": "OKR Stack",
   "short_name": "OKR Stack",
   "description": "SaaS multiempresa de objetivos y resultados clave con ponderaciones.",
-  "start_url": "/login",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#fafbfc",

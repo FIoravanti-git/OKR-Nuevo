@@ -1,10 +1,16 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
+import { getToken } from "next-auth/jwt";
 import { LandingPage } from "@/components/landing/landing-page";
 
-/** Siempre evaluar sesión en servidor; nunca redirigir a /login desde aquí (eso lo hace el proxy en rutas privadas). */
+/**
+ * Nunca redirigir a /login desde aquí.
+ * Sin sesión → landing. Con sesión → dashboard.
+ */
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
 
 export const metadata: Metadata = {
   title: { absolute: "OKR Stack | Estrategia que se ejecuta" },
@@ -18,9 +24,18 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
-  const session = await auth();
-  if (session?.user) {
-    redirect("/dashboard");
+  const secret = process.env.AUTH_SECRET;
+  if (secret) {
+    const cookieStore = await cookies();
+    const token = await getToken({
+      req: { headers: { cookie: cookieStore.toString() } },
+      secret,
+      secureCookie: process.env.NODE_ENV === "production",
+    });
+    if (token?.sub) {
+      redirect("/dashboard");
+    }
   }
+
   return <LandingPage />;
 }
