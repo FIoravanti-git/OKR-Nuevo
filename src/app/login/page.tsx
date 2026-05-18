@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import Link from "next/link";
+import { auth } from "@/auth";
 import {
   BarChart3,
   CheckCircle2,
@@ -28,7 +30,12 @@ function LoginFormFallback() {
   );
 }
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  const session = await auth();
+  if (session?.user) {
+    redirect("/dashboard");
+  }
+
   return (
     <div className="relative min-h-svh overflow-hidden bg-[#07060c] text-zinc-100">
       {/* Orbes y malla */}

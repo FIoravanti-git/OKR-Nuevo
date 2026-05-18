@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import type { UserRole } from "@/generated/prisma";
-import { isPublicPath } from "@/lib/auth/public-paths";
 import { requiresCompanyContext, routeRolePolicies } from "@/lib/auth/route-policies";
 
 type AppJwt = {
@@ -12,15 +11,11 @@ type AppJwt = {
 };
 
 /**
- * Next.js 16+: `src/proxy.ts` (sustituye a `middleware.ts`).
- * Las rutas públicas deben salir antes de JWT para que "/" muestre la landing.
+ * Next.js 16+: `src/proxy.ts`.
+ * Solo corre en rutas privadas (ver `config.matcher`): "/" y "/login" nunca entran aquí.
  */
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-
-  if (isPublicPath(pathname)) {
-    return NextResponse.next();
-  }
 
   const secret = process.env.AUTH_SECRET;
   if (!secret) {
@@ -37,10 +32,6 @@ export async function proxy(request: NextRequest) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(loginUrl);
-  }
-
-  if (pathname === "/login") {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
   for (const policy of routeRolePolicies) {
@@ -60,14 +51,20 @@ export async function proxy(request: NextRequest) {
   return NextResponse.next();
 }
 
+/** Literal requerido por Next (no spread en `matcher`). Mantener alineado con `PROTECTED_ROUTE_MATCHER`. */
 export const config = {
   matcher: [
-    "/",
-    "/login",
-    "/manifest.json",
-    "/sw.js",
-    "/icon-192.png",
-    "/icon-512.png",
-    "/((?!_next/static|_next/image|favicon.ico|sw.js|manifest.json|icon-192.png|icon-512.png|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    "/dashboard/:path*",
+    "/companies/:path*",
+    "/usuarios/:path*",
+    "/areas/:path*",
+    "/equipo/:path*",
+    "/proyecto/:path*",
+    "/objetivos-clave/:path*",
+    "/objetivos/:path*",
+    "/resultados-clave/:path*",
+    "/actividades/:path*",
+    "/reportes/:path*",
+    "/configuracion/:path*",
   ],
 };

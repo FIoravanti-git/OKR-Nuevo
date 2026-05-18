@@ -1,32 +1,13 @@
 /**
- * Rutas accesibles sin sesión (marketing, login, PWA y estáticos).
- * Usado por `src/proxy.ts` antes de `getToken` / redirecciones.
+ * Rutas públicas (documentación / referencia).
+ * El proxy NO usa un matcher global: estas rutas no están en PROTECTED_ROUTE_MATCHER.
  */
-const PUBLIC_EXACT = new Set([
+export const PUBLIC_ROUTES = [
   "/",
   "/login",
   "/manifest.json",
   "/sw.js",
-  "/favicon.ico",
   "/icon-192.png",
   "/icon-512.png",
-  "/icons/icon-192.png",
-  "/icons/icon-512.png",
-]);
-
-export function isPublicPath(pathname: string): boolean {
-  if (PUBLIC_EXACT.has(pathname)) {
-    return true;
-  }
-
-  if (
-    pathname.startsWith("/_next") ||
-    pathname.startsWith("/workbox-") ||
-    pathname.startsWith("/swe-worker-") ||
-    pathname.startsWith("/api/auth")
-  ) {
-    return true;
-  }
-
-  return /\.(?:svg|png|jpg|jpeg|gif|webp|ico)$/.test(pathname);
-}
+  "/favicon.ico",
+] as const;
