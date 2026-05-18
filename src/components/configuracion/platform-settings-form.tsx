@@ -71,18 +71,20 @@ export function PlatformSettingsForm({ hasPersistedRow, defaultValues }: Props) 
         <CardHeader>
           <CardTitle className="text-base">Parámetros de plataforma</CardTitle>
           <CardDescription>
-            Nombre visible, contacto de soporte y aviso opcional para todos los usuarios (texto informativo).
+            Podés guardar solo los campos que necesites. Los vacíos no borran lo ya guardado. Correo y aviso son opcionales.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-6 sm:grid-cols-2">
           <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="pf-display-name">Nombre de la plataforma</Label>
+            <Label htmlFor="pf-display-name">Nombre de la plataforma (opcional)</Label>
             <Input
               id="pf-display-name"
               autoComplete="organization"
+              placeholder="OKR Stack"
               aria-invalid={!!errors.displayName}
               {...register("displayName")}
             />
+            <p className="text-xs text-muted-foreground">Si lo dejás vacío, se usa el nombre actual o «OKR Stack».</p>
             {errors.displayName ? (
               <p className="text-xs text-destructive">{errors.displayName.message}</p>
             ) : null}

@@ -2,9 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/session-user";
+import { isValidEmailSimple, keepIfEmpty, keepStringWithDefault } from "@/lib/config/partial-save";
 import { prisma } from "@/lib/prisma";
 import { PLATFORM_CONFIG_ROW_ID } from "./constants";
 import { platformConfigFormSchema } from "./schemas";
+
+const DEFAULT_DISPLAY_NAME = "OKR Stack";
 
 export type PlatformConfigActionResult =
   | { ok: true }
@@ -22,7 +25,35 @@ export async function upsertPlatformConfig(input: unknown): Promise<PlatformConf
     };
   }
 
-  const { displayName, supportEmail, noticeBanner } = parsed.data;
+  const existing = await prisma.platformConfig.findUnique({
+    where: { id: PLATFORM_CONFIG_ROW_ID },
+    select: { displayName: true, supportEmail: true, noticeBanner: true },
+  });
+
+  const raw = parsed.data;
+  const fieldErrors: Record<string, string[]> = {};
+
+  const displayNameInput = raw.displayName?.trim() ?? "";
+  if (displayNameInput.length > 0 && displayNameInput.length < 2) {
+    fieldErrors.displayName = ["Si completás el nombre, usá al menos 2 caracteres."];
+  }
+
+  const supportEmailInput = raw.supportEmail?.trim() ?? "";
+  if (supportEmailInput.length > 0 && !isValidEmailSimple(supportEmailInput)) {
+    fieldErrors.supportEmail = ["El correo de soporte no es válido."];
+  }
+
+  if (Object.keys(fieldErrors).length > 0) {
+    return {
+      ok: false,
+      message: "Revisá los campos marcados.",
+      fieldErrors,
+    };
+  }
+
+  const displayName = keepStringWithDefault(raw.displayName, existing?.displayName, DEFAULT_DISPLAY_NAME);
+  const supportEmail = keepIfEmpty(raw.supportEmail, existing?.supportEmail);
+  const noticeBanner = keepIfEmpty(raw.noticeBanner, existing?.noticeBanner);
 
   await prisma.platformConfig.upsert({
     where: { id: PLATFORM_CONFIG_ROW_ID },

@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { AppBrandMark } from "@/components/branding/app-brand-mark";
 import { upsertAppBranding } from "@/lib/app-branding/actions";
 import { appBrandingFormSchema, type AppBrandingFormInput } from "@/lib/app-branding/schemas";
+import { getDefaultAppBranding } from "@/lib/app-branding/defaults";
 import type { AppBrandingConfig } from "@/lib/app-branding/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,13 +40,14 @@ export function GlobalBrandingForm({ hasPersistedRow, defaultValues }: Props) {
   });
 
   const watched = watch();
+  const brandingDefaults = getDefaultAppBranding();
   const previewBranding: AppBrandingConfig = {
-    appName: watched.appName || defaultValues.appName,
+    appName: watched.appName?.trim() || defaultValues.appName || brandingDefaults.appName,
     logoUrl: watched.logoUrl?.trim() || null,
     logoAlt: watched.logoAlt?.trim() || null,
     faviconUrl: watched.faviconUrl?.trim() || null,
-    primaryColor: watched.primaryColor || defaultValues.primaryColor,
-    secondaryColor: watched.secondaryColor || defaultValues.secondaryColor,
+    primaryColor: watched.primaryColor?.trim() || defaultValues.primaryColor || brandingDefaults.primaryColor,
+    secondaryColor: watched.secondaryColor?.trim() || defaultValues.secondaryColor || brandingDefaults.secondaryColor,
   };
 
   const [logoPreviewError, setLogoPreviewError] = useState(false);
@@ -70,8 +72,9 @@ export function GlobalBrandingForm({ hasPersistedRow, defaultValues }: Props) {
     <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-6" noValidate>
       <div>
         <h2 className="font-heading text-lg font-semibold tracking-tight">Marca global del sistema</h2>
-        <p className="text-sm text-muted-foreground">
-          Logo, nombre y colores de toda la plataforma. No modifica la marca de cada empresa cliente.
+          <p className="text-sm text-muted-foreground">
+          Logo, nombre y colores de toda la plataforma. Podés guardar cambios parciales; los campos vacíos no borran lo
+          ya guardado.
         </p>
       </div>
 
@@ -119,12 +122,12 @@ export function GlobalBrandingForm({ hasPersistedRow, defaultValues }: Props) {
         </CardHeader>
         <CardContent className="grid gap-6 sm:grid-cols-2">
           <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="gb-app-name">Nombre de la aplicación</Label>
+            <Label htmlFor="gb-app-name">Nombre de la aplicación (opcional)</Label>
             <Input id="gb-app-name" {...register("appName")} aria-invalid={!!errors.appName} />
             {errors.appName ? <p className="text-xs text-destructive">{errors.appName.message}</p> : null}
           </div>
           <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="gb-logo-url">URL del logo</Label>
+            <Label htmlFor="gb-logo-url">URL del logo (opcional)</Label>
             <Input id="gb-logo-url" placeholder="https://..." {...register("logoUrl")} />
             {errors.logoUrl ? <p className="text-xs text-destructive">{errors.logoUrl.message}</p> : null}
           </div>
@@ -133,11 +136,11 @@ export function GlobalBrandingForm({ hasPersistedRow, defaultValues }: Props) {
             <Input id="gb-logo-alt" placeholder="Nombre para lectores de pantalla" {...register("logoAlt")} />
           </div>
           <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="gb-favicon-url">URL del ícono (favicon)</Label>
+            <Label htmlFor="gb-favicon-url">URL del ícono (opcional)</Label>
             <Input id="gb-favicon-url" placeholder="https://.../favicon.png" {...register("faviconUrl")} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="gb-primary">Color principal</Label>
+            <Label htmlFor="gb-primary">Color principal (opcional)</Label>
             <div className="flex gap-2">
               <Input
                 id="gb-primary"
@@ -151,7 +154,7 @@ export function GlobalBrandingForm({ hasPersistedRow, defaultValues }: Props) {
             {errors.primaryColor ? <p className="text-xs text-destructive">{errors.primaryColor.message}</p> : null}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="gb-secondary">Color secundario</Label>
+            <Label htmlFor="gb-secondary">Color secundario (opcional)</Label>
             <div className="flex gap-2">
               <Input
                 id="gb-secondary"

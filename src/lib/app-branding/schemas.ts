@@ -1,19 +1,21 @@
 import { z } from "zod";
 
-const hexColor = z
+const hexColorOptional = z
   .string()
-  .trim()
-  .regex(/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/, "Usá un color en formato #RGB o #RRGGBB");
-
-const optionalUrl = z.string().trim().max(512).optional().or(z.literal(""));
+  .max(32)
+  .optional()
+  .default("")
+  .refine((s) => s === "" || /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(s.trim()), {
+    message: "Usá un color en formato #RGB o #RRGGBB",
+  });
 
 export const appBrandingFormSchema = z.object({
-  appName: z.string().trim().min(1, "El nombre es obligatorio").max(128),
-  logoUrl: optionalUrl,
-  logoAlt: z.string().trim().max(256).optional().or(z.literal("")),
-  faviconUrl: optionalUrl,
-  primaryColor: hexColor,
-  secondaryColor: hexColor,
+  appName: z.string().max(128).optional().default(""),
+  logoUrl: z.string().max(512).optional().default(""),
+  logoAlt: z.string().max(256).optional().default(""),
+  faviconUrl: z.string().max(512).optional().default(""),
+  primaryColor: hexColorOptional,
+  secondaryColor: hexColorOptional,
 });
 
-export type AppBrandingFormInput = z.infer<typeof appBrandingFormSchema>;
+export type AppBrandingFormInput = z.input<typeof appBrandingFormSchema>;
